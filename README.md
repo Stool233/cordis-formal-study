@@ -30,7 +30,7 @@ See [Method](docs/method.md) for the detailed methodology and adaptation choices
 | --- | --- | --- |
 | [`Stool233/cordis`](sources/cordis/) | Authoritative TLA+ kit and upstream implementation | `23f5e7d6e4a0cf451567dad1caad7b4049df6992` |
 | [`cordiverse/paper`](sources/paper/) | English paper | `948a07b369c62adb3b12e102458be5c18dfb69b9` |
-| [`Stool233/deepseek-harness`](sources/deepseek-harness/) | Vendored Cordis and offline AgentLoop target | `9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f` |
+| [`Stool233/deepseek-harness`](https://github.com/Stool233/deepseek-harness/tree/9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f) | Vendored Cordis and offline AgentLoop target | `9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f` |
 
 [`study.lock.json`](study.lock.json) is the machine-readable source of truth. It records upstream baselines, fork revisions, paper, dependency-lock and toolchain hashes, scenario counts, required properties, mutations, and observation points. Git submodule links provide the matching browsable snapshots.
 

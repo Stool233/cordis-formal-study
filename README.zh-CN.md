@@ -30,7 +30,7 @@
 | --- | --- | --- |
 | [`Stool233/cordis`](sources/cordis/) | 权威 TLA+ 工具包和上游实现 | `23f5e7d6e4a0cf451567dad1caad7b4049df6992` |
 | [`cordiverse/paper`](sources/paper/) | 英文论文 | `948a07b369c62adb3b12e102458be5c18dfb69b9` |
-| [`Stool233/deepseek-harness`](sources/deepseek-harness/) | vendored Cordis 与离线 AgentLoop 验证目标 | `9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f` |
+| [`Stool233/deepseek-harness`](https://github.com/Stool233/deepseek-harness/tree/9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f) | vendored Cordis 与离线 AgentLoop 验证目标 | `9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f` |
 
 [`study.lock.json`](study.lock.json) 是机器可读的事实来源。它记录上游基线、个人 fork revision、论文、依赖锁与工具链哈希、场景数、required properties、mutations 和 observation points；git submodule 链接提供与之匹配且可直接浏览的源码快照。
 
