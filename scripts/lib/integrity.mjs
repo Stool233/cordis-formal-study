@@ -250,6 +250,13 @@ async function validatePortalFiles() {
   ]) {
     assert.equal(await exists(resolve(studyRoot, path)), true, `${path} is missing`)
   }
+  for (const path of ['.github/workflows/conformance.yml', '.github/workflows/nightly.yml']) {
+    const workflow = await readFile(resolve(studyRoot, path), 'utf8')
+    assert.ok(workflow.includes('uses: actions/upload-artifact@v7'), `${path} must use upload-artifact v7`)
+    assert.ok(workflow.includes('include-hidden-files: true'), `${path} must upload the hidden evidence root`)
+  }
+  const release = await readFile(resolve(studyRoot, '.github/workflows/release.yml'), 'utf8')
+  assert.ok(release.includes('uses: actions/upload-artifact@v7'), 'release workflow must use upload-artifact v7')
 }
 
 async function validateLicenses(lock, states) {
