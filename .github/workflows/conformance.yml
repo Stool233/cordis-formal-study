@@ -75,6 +75,12 @@ jobs:
         if: always()
         with:
           name: research-${{ env.RESEARCH_STAGE }}-evidence
-          path: .artifacts/
+          path: |
+            .artifacts/stages/
+            .artifacts/study-report.json
+            .artifacts/study-report.md
+            !.artifacts/**/cache/**
+            !.artifacts/**/tlc/**
+            !.artifacts/**/*.jar
           include-hidden-files: true
           if-no-files-found: warn

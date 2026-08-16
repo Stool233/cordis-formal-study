@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict'
 import { execFile } from 'node:child_process'
+import { readFile } from 'node:fs/promises'
 import { promisify } from 'node:util'
 import test from 'node:test'
 import {
@@ -301,5 +302,16 @@ test('CLI exposes the three-stage and low-level command surface', async () => {
   const { stdout } = await execute(process.execPath, ['scripts/study.mjs', 'help'], { cwd: studyRoot })
   for (const command of ['bootstrap', 'baseline', 'conformance', 'upstream-fix', 'study', 'nightly', 'package']) {
     assert.match(stdout, new RegExp(command))
+  }
+})
+
+test('CI artifacts exclude stage checkouts, dependencies, JARs, and TLC metadirectories', async () => {
+  for (const path of ['.github/workflows/conformance.yml', '.github/workflows/nightly.yml']) {
+    const workflow = await readFile(new URL(`../${path}`, import.meta.url), 'utf8')
+    assert.equal(workflow.includes('path: .artifacts/'), false)
+    assert.match(workflow, /\.artifacts\/stages\//)
+    assert.match(workflow, /!\.artifacts\/\*\*\/cache\/\*\*/)
+    assert.match(workflow, /!\.artifacts\/\*\*\/tlc\/\*\*/)
+    assert.match(workflow, /!\.artifacts\/\*\*\/\*\.jar/)
   }
 })

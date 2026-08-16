@@ -303,6 +303,10 @@ async function validatePortalFiles() {
     const workflow = await readFile(resolve(studyRoot, path), 'utf8')
     assert.ok(workflow.includes('uses: actions/upload-artifact@v7'), `${path} must use upload-artifact v7`)
     assert.ok(workflow.includes('include-hidden-files: true'), `${path} must upload the hidden evidence root`)
+    assert.equal(workflow.includes('path: .artifacts/'), false, `${path} must not upload checkout and dependency caches`)
+    for (const pattern of ['.artifacts/stages/', '!.artifacts/**/cache/**', '!.artifacts/**/tlc/**', '!.artifacts/**/*.jar']) {
+      assert.ok(workflow.includes(pattern), `${path} must use the evidence allowlist pattern ${pattern}`)
+    }
   }
   const conformance = await readFile(resolve(studyRoot, '.github/workflows/conformance.yml'), 'utf8')
   for (const value of ['baseline', 'conformance', 'upstream-fix', 'study', 'npm run bootstrap:study', 'reproduce:${RESEARCH_STAGE}', 'timeout-minutes: 60']) {

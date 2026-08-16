@@ -40,6 +40,13 @@ jobs:
         if: always()
         with:
           name: nightly-evidence
-          path: .artifacts/
+          path: |
+            .artifacts/stages/
+            .artifacts/study-report.json
+            .artifacts/study-report.md
+            .artifacts/cordis-nightly/
+            !.artifacts/**/cache/**
+            !.artifacts/**/tlc/**
+            !.artifacts/**/*.jar
           include-hidden-files: true
           if-no-files-found: warn
