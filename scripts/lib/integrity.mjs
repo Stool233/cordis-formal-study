@@ -75,6 +75,39 @@ export async function loadStudyLock() {
   for (const [, repository] of repositoryEntries(lock)) {
     assert.equal(repository.branch.startsWith('codex/'), false, `${repository.path} uses a forbidden codex/* branch`)
   }
+  for (const key of ['cordis', 'deepseekHarness']) {
+    const repository = lock.repositories[key]
+    const variants = lock.branchMatrix[key]
+    assert.deepEqual(
+      {
+        branch: repository.branch,
+        revision: repository.revision,
+      },
+      {
+        branch: variants.conformance.branch,
+        revision: variants.conformance.revision,
+      },
+      `${key} primary source must be the conformance variant`,
+    )
+    assert.deepEqual(
+      [variants.traceBaseline.traceInstrumentation, variants.traceBaseline.logicFixes, variants.traceBaseline.evidence],
+      [true, false, 'expected-trace-mismatches'],
+      `${key} trace baseline has the wrong role`,
+    )
+    assert.deepEqual(
+      [variants.conformance.traceInstrumentation, variants.conformance.logicFixes, variants.conformance.evidence],
+      [true, true, 'formal-and-ordinary-tests-pass'],
+      `${key} conformance variant has the wrong role`,
+    )
+    assert.deepEqual(
+      [variants.upstreamFix.traceInstrumentation, variants.upstreamFix.logicFixes, variants.upstreamFix.evidence],
+      [false, true, 'ordinary-tests-pass'],
+      `${key} upstream-fix variant has the wrong role`,
+    )
+    for (const variant of Object.values(variants)) {
+      assert.equal(variant.branch.startsWith('codex/'), false, `${key} variant uses a forbidden codex/* branch`)
+    }
+  }
   return lock
 }
 
@@ -142,6 +175,9 @@ async function validateCoreSource(lock) {
   ])
   assert.equal(provenance.paper.commit, lock.repositories.paper.revision)
   assert.equal(provenance.paper.sha256, lock.paper.sha256)
+  assert.equal(provenance.cordis.baseline, lock.repositories.cordis.baseline)
+  assert.equal(provenance.cordis.formalBranch, lock.repositories.cordis.branch)
+  assert.equal(provenance.deepseekHarness.baseline, lock.repositories.deepseekHarness.baseline)
   assert.equal(provenance.specula.commit, lock.references.specula.commit)
   assert.equal(provenance.specula.version, lock.references.specula.version)
   assert.deepEqual(provenance.toolchain, {

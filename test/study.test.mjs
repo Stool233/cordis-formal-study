@@ -11,6 +11,7 @@ import {
   validateReleaseManifest,
   validateSubmoduleState,
 } from '../scripts/lib/evidence.mjs'
+import { loadStudyLock } from '../scripts/lib/integrity.mjs'
 import { SchemaValidationError, validateSchema } from '../scripts/lib/schema.mjs'
 import { absolutePathAt, portableReference, studyRoot } from '../scripts/lib/system.mjs'
 
@@ -43,6 +44,18 @@ test('schema validator rejects missing and extra fields', () => {
   assert.throws(() => validateSchema({}, schema), SchemaValidationError)
   assert.throws(() => validateSchema({ name: 'study', extra: true }, schema), SchemaValidationError)
   assert.deepEqual(validateSchema({ name: 'study' }, schema), { name: 'study' })
+})
+
+test('branch matrix separates baseline, conformance, and upstream-fix roles', async () => {
+  const lock = await loadStudyLock()
+  for (const key of ['cordis', 'deepseekHarness']) {
+    const variants = lock.branchMatrix[key]
+    assert.deepEqual(
+      Object.values(variants).map(variant => [variant.traceInstrumentation, variant.logicFixes]),
+      [[true, false], [true, true], [false, true]],
+    )
+    assert.equal(lock.repositories[key].revision, variants.conformance.revision)
+  }
 })
 
 test('gitlink and initialized submodule state must match the lock', () => {

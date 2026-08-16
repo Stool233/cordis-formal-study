@@ -41,6 +41,29 @@ AgentLoop 场景使用 `mountAgentLoopTestDependencies()`，不需要 API key �
 
 生成后再次运行 `npm run verify`。验证器会检查完整 `TraceMatched`、精确的场景与前提集合、四个被拒绝的 mutations、required model properties、相对路径，以及匹配的实现 revision。
 
+## CI 触发映射
+
+门户是主要的跨仓触发入口：
+
+| 仓库 / workflow | 触发条件 | 是否运行 TLC | 主要命令 |
+| --- | --- | --- | --- |
+| 门户 / `Integrity` | 每次 push 和 pull request | 否 | `npm test` 与 `npm run verify -- --full` |
+| 门户 / `Conformance` | 手动触发；相关 pull request；`main` 的相关 push | 是 | `npm run reproduce:full` |
+| 门户 / `Nightly` | 手动触发；每周一 03:17 UTC | 是，扩大 profile | `npm run reproduce:nightly`，随后运行 `npm run reproduce:full` |
+| Cordis / `Paper conformance` | 相关 pull request；Cordis `main` 的相关 push | 是 | `yarn formal:check --quiet` |
+| Cordis / `Paper conformance nightly` | 手动触发；workflow 位于默认分支后每天 17:23 UTC | 是，扩大 profile | `yarn formal:nightly --quiet` |
+| DeepSeek Harness / `Cordis paper conformance` job | 仅 pull request | 是，vendored 轨迹 | `pnpm test:cordis-paper` |
+
+research 分支有意不把单独 push 当作 Release 触发条件：Cordis 的 PR workflow 只在 `main` 接受 push 事件，DeepSeek Harness 相关 job 也带有 pull-request 条件。在当前个人 fork 布局中，应手动触发门户 `Conformance` workflow，或通过门户 `main` 的固定源码变更触发完整验证主流程。
+
+## 分支专用检查
+
+比较变体时应使用独立 checkout；如果把门户 submodule 切离 lock 固定的一致性 revision，`npm run verify` 会按设计失败。
+
+- 在 `research/paper-trace-baseline` 上，Cordis 运行 `yarn formal:baseline --quiet`；DeepSeek Harness 运行 `pnpm test:cordis-paper`，并让 `CORDIS_FORMAL_ROOT` 指向匹配的 Cordis 基线 checkout。已知 mismatch 必须精确报告；意外通过或新增失败都属于错误。
+- 在 `research/paper-conformance` 上，Cordis 运行 `yarn formal:check --quiet`；DeepSeek Harness 对该 Cordis checkout 运行 `pnpm test:cordis-paper`。全部 required 轨迹必须通过，四个 mutations 必须按要求被拒绝。
+- 在 `fix/paper-conformance` 上，运行 Cordis 或 DeepSeek Harness 的普通回归、类型、lint 和文档检查。该分支没有 trace sink，因此不直接运行轨迹 refinement。
+
 ## 打包 Release 证据
 
 PR、nightly 和 vendored 证据全部存在后运行：

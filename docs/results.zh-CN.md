@@ -4,7 +4,13 @@
 
 ## 检查的 revision 集合
 
-当前门户固定 Cordis `23f5e7d6e4a0cf451567dad1caad7b4049df6992`、英文论文 `948a07b369c62adb3b12e102458be5c18dfb69b9`，以及 DeepSeek Harness `9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f`。
+当前门户固定 Cordis `fe45fb4d1e89fd6c8ae24399f601a3da9356da8a`、英文论文 `948a07b369c62adb3b12e102458be5c18dfb69b9`，以及 DeepSeek Harness `7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773`。
+
+## 基线对比
+
+仅轨迹分支保留上游和 vendored 运行时逻辑。预期失败 runner 记录 Cordis 的 9 个受影响轨迹场景和 vendored 版本的 10 个受影响场景。普通回归还独立暴露出上游 Cordis 的 4 项失败和 vendored 基线的 3 项失败：provider 资源在异步 consumer 完成前被撤回；并发 root disposal 期间，正在退休的 consumer 过早消失；已等待的 provider 返回时，传递激活尚未结算。上游 Cordis 还无法在 disposal 抢先于延迟激活时 drain pending effect，而 vendored 基线此前已有的生命周期加固已能通过该项。
+
+这些数字表示受影响的场景和检查数量，并不是独立缺陷数量。多个场景会通过不同的依赖、identity、realm 或 confluence 路径到达同一个生命周期顺序 mismatch。
 
 ## 有界模型结果
 
@@ -35,7 +41,11 @@ lock 中有 13 条核心轨迹和四条 DeepSeek Harness 额外轨迹，因此 v
 
 ## 发现的实现偏差
 
-轨迹 refinement 暴露了 provider/dependent teardown、两层 inverse recovery，以及 lifecycle/committed-view 发布顺序上的差异。实现现已改为：等待 dependent retirement 后再恢复 provider；每个 iterator 内按 LIFO 恢复 inverse resources，同时 join 相互独立的 structural wrappers；先发布 lifecycle state，再暴露与之兼容的 target 或 committed view。论文规格没有为了接受旧顺序而被削弱。
+轨迹 refinement 确认了两项与论文有关的实现偏差。第一，provider recovery 可能在异步 dependent teardown 完成前开始，而且过早从 runtime list 移除会隐藏并发退休的 consumer。第二，依赖 target 与 committed view 的变化可能先于兼容的生命周期转换而变得可观察。实现现在会保留正在退休的 consumer 直至 quiescence，在 provider recovery 前等待已通知的 dependents，并先发布生命周期转换，再暴露不兼容的 target 或 committed view。论文规格没有为了接受旧顺序而被削弱。
+
+普通回归在首次形式化通过后又发现一项相邻的调度缺陷：连续两个激活检查点会使已等待的 provider 返回时，传递 consumer 仍处于 `LOADING`。修正后的实现只保留一个延迟取消检查点，因此 disposal 仍可使 stale activation 失效，而传递激活会在已等待的 mount 返回前结算。
+
+独立顶层 effect recovery 已经过调查，但不归类为论文偏差。每个 effect iterator 内的 recovery 是串行 LIFO；不同顶层 wrapper 在显式 `PairwiseIndependent` 前提下按注册逆序启动并并发 join。因此，session-persistence admission 与 backend closure 这类需要完成顺序的 cleanup 操作会共享同一个 accumulator，而不是依赖全局 wrapper 串行化。
 
 静态 `Plugin.provide` 元数据不会被直接假定成论文 provision。目前的运行时 provision 证据来自受控 `ctx.provide()` episode，并带有稳定 logical key 和 realm identity。因此，`TotalProvision` 只适用于 harness 已闭合全部 provider 的场景。
 

@@ -4,7 +4,7 @@
 
 ## 权威归属
 
-本研究只有一个可执行规格权威：[固定 revision 的 Cordis `formal/` 目录](https://github.com/Stool233/cordis/tree/23f5e7d6e4a0cf451567dad1caad7b4049df6992/formal)。门户不复制 TLA+ 模块，只负责源码固定、完整性检查、运行编排、双语解释和 Release 证据打包。
+本研究只有一个可执行规格权威：[固定 revision 的 Cordis `formal/` 目录](https://github.com/Stool233/cordis/tree/fe45fb4d1e89fd6c8ae24399f601a3da9356da8a/formal)。门户不复制 TLA+ 模块，只负责源码固定、完整性检查、运行编排、双语解释和 Release 证据打包。
 
 ```text
 Cordis 论文 ───────> Cordis TLA+ 抽象机器 ───────> 有界 TLC 报告
@@ -23,15 +23,15 @@ DeepSeek Harness 只携带实现侧 trace hook、vendored 加固、额外场景�
 
 `sources/` 下三个目录都是 git submodule。其已提交 gitlink 必须等于 [`study.lock.json`](../study.lock.json) 中的完整 revision：
 
-- `sources/cordis` 来自个人 fork，因为其中包含权威形式化规格和实现修复；
+- `sources/cordis` 来自个人 fork，指向包含权威形式化规格的“轨迹加修复”一致性变体；
 - `sources/paper` 直接来自上游英文论文仓库；
-- `sources/deepseek-harness` 来自个人 fork，因为其中包含 vendored trace hook 和一致性场景。
+- `sources/deepseek-harness` 来自个人 fork，指向与之匹配的“轨迹加修复”vendored 验证目标。
 
-lock 还记录每个上游 baseline，以及原始研究提交到 Stool233 身份重写提交的映射。这样既保留来源，也不会把个人 fork 的重写历史描述成上游原 commit。
+lock 的 `branchMatrix` 还为每个实现记录两个变体。`research/paper-trace-baseline` 只增加观测，不改变运行时逻辑，并且必须复现已知 mismatch；`fix/paper-conformance` 携带相同修复和普通回归，但不含 trace sink 或 formal runner。固定 gitlink 仍指向 `research/paper-conformance`，门户证据和 Release 打包只使用这一变体。
 
 ## 证据流
 
-PR profile 先运行 schema 和源码完整性检查，再运行 Cordis 语法检查、有界模型、观测覆盖、上游轨迹和四个 mutations。full conformance 增加 vendored 实现和离线 AgentLoop 装配。nightly profile 扩大模型常量，仅在完整 BFS 直径不足时补充 simulation。
+基线变体用于证明未修改运行时会在受影响轨迹场景中被拒绝。一致性变体的 PR profile 先运行 schema 和源码完整性检查，再运行 Cordis 语法检查、有界模型、观测覆盖、上游轨迹和四个 mutations。full conformance 增加 vendored 实现和离线 AgentLoop 装配。nightly profile 扩大模型常量，仅在完整 BFS 直径不足时补充 simulation。
 
 每个实现场景会在两个不同临时根中分别记录。两棵文件树必须逐字节相同，之后才会把其中一份复制到指定 output root。`CordisTrace.tla` 随后用游标消费每一行。聚合结果要通过，轨迹必须非空、被完整消费，而且所有 required property 都是 `pass`。
 
@@ -45,6 +45,6 @@ Release 打包只选择 JSON/NDJSON 证据、源码 provenance、study lock 和�
 
 ## 完整性门禁
 
-`npm run verify` 检查 JSON Schema、全部 gitlink/lock 相等、已初始化 submodule 的精确 clean HEAD、论文哈希、个人 fork 提交身份、工具哈希、源码观测点/场景数量、双语文档、本地链接、许可证边界，以及已经存在的任何证据目录。`npm run verify -- --full` 还要求 DeepSeek Harness 已初始化，并检查其 Cordis pin 与源码清单；CI 使用 full 形式。
+`npm run verify` 检查 JSON Schema、分支角色矩阵、全部 gitlink/lock 相等、已初始化 submodule 的精确 clean HEAD、论文哈希、个人 fork 提交身份、工具哈希、源码观测点/场景数量、双语文档、本地链接、许可证边界，以及已经存在的任何证据目录。`npm run verify -- --full` 还要求 DeepSeek Harness 已初始化，并检查其 Cordis pin 与源码清单；CI 使用 full 形式。
 
 bootstrap 绝不会修复已经初始化的 submodule。dirty worktree 或错误 HEAD 会直接报错，因为 reset 可能破坏用户工作，也会掩盖 provenance 不一致。只有尚未初始化的 submodule 才会按照已提交 gitlink 初始化。

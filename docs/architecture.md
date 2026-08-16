@@ -4,7 +4,7 @@ English | [中文](architecture.zh-CN.md)
 
 ## Ownership
 
-The study has one executable-specification authority: [the locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/23f5e7d6e4a0cf451567dad1caad7b4049df6992/formal). The portal does not copy TLA+ modules. It owns source pinning, integrity checks, orchestration, bilingual explanation, and release evidence packaging.
+The study has one executable-specification authority: [the locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/fe45fb4d1e89fd6c8ae24399f601a3da9356da8a/formal). The portal does not copy TLA+ modules. It owns source pinning, integrity checks, orchestration, bilingual explanation, and release evidence packaging.
 
 ```text
 Cordis paper ───────> Cordis TLA+ abstract machines ───────> bounded TLC reports
@@ -23,15 +23,15 @@ DeepSeek Harness carries only its implementation-side trace hook, vendored harde
 
 The three entries under `sources/` are git submodules. Their committed gitlinks must equal the full revisions in [`study.lock.json`](../study.lock.json):
 
-- `sources/cordis` comes from the personal fork because it contains the authoritative formalization and implementation fixes;
+- `sources/cordis` comes from the personal fork and points to the trace-plus-fix conformance variant containing the authoritative formalization;
 - `sources/paper` comes directly from the upstream English-paper repository;
-- `sources/deepseek-harness` comes from the personal fork because it contains the vendored trace hook and conformance scenarios.
+- `sources/deepseek-harness` comes from the personal fork and points to the matching trace-plus-fix vendored target.
 
-The lock also records each upstream baseline and the mapping from the original research commit to its Stool233-authored replacement. This preserves provenance without presenting rewritten personal-fork history as an upstream commit.
+The lock's `branchMatrix` records two additional variants for each implementation. `research/paper-trace-baseline` adds observation without changing runtime logic and must reproduce the known mismatches. `fix/paper-conformance` carries the same corrections and ordinary regressions without any trace sink or formal runner. The fixed gitlinks remain on `research/paper-conformance`, which is the only variant used for portal evidence and Release packaging.
 
 ## Evidence flow
 
-The PR profile first runs schema and source integrity checks, then the Cordis syntax check, bounded models, observation coverage, upstream traces, and four mutations. Full conformance adds the vendored implementation and an offline AgentLoop assembly. The nightly profile expands model constants and adds simulation only when a completed BFS has insufficient diameter.
+The baseline variants establish that the unmodified runtimes are rejected in the affected trace scenarios. The PR profile on the conformance variants first runs schema and source integrity checks, then the Cordis syntax check, bounded models, observation coverage, upstream traces, and four mutations. Full conformance adds the vendored implementation and an offline AgentLoop assembly. The nightly profile expands model constants and adds simulation only when a completed BFS has insufficient diameter.
 
 Each implementation scenario is recorded twice in distinct temporary roots. The two file trees must be byte-identical before one is copied to the requested output root. `CordisTrace.tla` then consumes every line with a cursor. A passing aggregate result requires a non-empty trace, complete consumption, and `pass` for every required property.
 
@@ -45,6 +45,6 @@ Release packaging selects only JSON and NDJSON evidence, source provenance, the 
 
 ## Integrity gates
 
-`npm run verify` checks the JSON Schema, every gitlink/lock equality, initialized submodules and their exact clean HEADs, paper hash, personal-fork commit identity, tool hashes, source observation/scenario counts, bilingual documents, local links, license boundaries, and any evidence directories already present. `npm run verify -- --full` additionally requires DeepSeek Harness to be initialized and checks its Cordis pin and source inventory; CI uses this full form.
+`npm run verify` checks the JSON Schema, branch-role matrix, every gitlink/lock equality, initialized submodules and their exact clean HEADs, paper hash, personal-fork commit identity, tool hashes, source observation/scenario counts, bilingual documents, local links, license boundaries, and any evidence directories already present. `npm run verify -- --full` additionally requires DeepSeek Harness to be initialized and checks its Cordis pin and source inventory; CI uses this full form.
 
 Bootstrap never repairs an initialized submodule. A dirty worktree or mismatched HEAD is an error, because resetting it could destroy work and would hide a provenance mismatch. Only an uninitialized submodule is initialized from the committed gitlink.

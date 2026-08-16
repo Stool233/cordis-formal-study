@@ -22,6 +22,8 @@ Cordis differs from Raft. Its important interleavings occur among fibers, depend
 
 The study also starts from a paper with named definitions, lemmas, and theorems. The paper is therefore the specification priority. When a mismatch is confirmed as an implementation deviation, the workflow retains the minimal counterexample and fixes the implementation. It does not relax the specification merely to accept current behavior.
 
+Three branches keep that diagnosis auditable. The trace-baseline branches preserve runtime logic and classify the observed mismatches as expected failures. The conformance branches apply the corrections while retaining instrumentation, so TLC traces and ordinary regressions must both pass. The fix-only branches remove all research instrumentation and carry only the corrections plus ordinary tests for later upstream review. A formal pass is claimed only for the conformance branches; the fix-only branches inherit their formal rationale from the identical corrections exercised there.
+
 The adaptation has three evidence layers:
 
 1. `CordisEffects`, `CordisKernel`, `CordisRuntime`, and `CordisConfluence` are checked by TLC in bounded PR and nightly configurations.

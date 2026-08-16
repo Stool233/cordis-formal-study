@@ -6,7 +6,7 @@ English | [中文](README.zh-CN.md)
 
 An independent, unofficial, reproducible study of the Cordis paper, its upstream implementation, and the vendored Cordis used by DeepSeek Harness. The study combines bounded TLA+ model checking, deterministic implementation-trace validation, and explicit theorem-premise audits.
 
-The authoritative executable specification remains in [the locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/23f5e7d6e4a0cf451567dad1caad7b4049df6992/formal). This portal pins and explains the source revisions, runs the evidence pipeline, and packages portable results; it does not duplicate or fork the specification.
+The authoritative executable specification remains in [the locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/fe45fb4d1e89fd6c8ae24399f601a3da9356da8a/formal). This portal pins and explains the source revisions, runs the evidence pipeline, and packages portable results; it does not duplicate or fork the specification.
 
 ## Background
 
@@ -24,13 +24,25 @@ In this adaptation:
 
 See [Method](docs/method.md) for the detailed methodology and adaptation choices, and [Architecture](docs/architecture.md) for the evidence flow.
 
+## Three-branch separation
+
+The study now keeps observation, correction, and upstream review concerns separate in both implementation repositories:
+
+| Variant | Cordis | DeepSeek Harness | Purpose |
+| --- | --- | --- | --- |
+| Trace baseline | [`6626624`](https://github.com/Stool233/cordis/tree/66266245a8dbbaf26f0b9ace45d320edce700eda) | [`cdbe25a`](https://github.com/Stool233/deepseek-harness/tree/cdbe25a0a62096ddb57af3e7e1c98b6a352fcbdd) | Adds deterministic trace observation and expected-failure checks to the unmodified runtime logic. |
+| Trace + fixes | [`fe45fb4`](https://github.com/Stool233/cordis/tree/fe45fb4d1e89fd6c8ae24399f601a3da9356da8a) | [`7797ad8`](https://github.com/Stool233/deepseek-harness/tree/7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773) | Applies the corrections and requires TLC traces, ordinary regressions, premise audits, and mutations to pass. This is the portal's locked source pair. |
+| Fix only | [`3120ba9`](https://github.com/Stool233/cordis/tree/3120ba9928bd5fe37e34f50e521077121000f050) | [`6bb3cdd`](https://github.com/Stool233/deepseek-harness/tree/6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3) | Contains the runtime corrections and ordinary tests without the trace sink or formal runner, for later upstream proposals. |
+
+The trace baseline currently records nine affected Cordis scenarios and ten affected vendored scenarios as expected mismatches. These are scenario-level manifestations, not nine or ten independent implementation defects. The fix-only branches deliberately cannot produce trace-refinement evidence; the same corrections are present in the trace-plus-fix branches, where the formal checks pass.
+
 ## Pinned source snapshot
 
 | Source | Role | Locked revision |
 | --- | --- | --- |
-| [`Stool233/cordis`](sources/cordis/) | Authoritative TLA+ kit and upstream implementation | `23f5e7d6e4a0cf451567dad1caad7b4049df6992` |
-| [`cordiverse/paper`](sources/paper/) | English paper | `948a07b369c62adb3b12e102458be5c18dfb69b9` |
-| [`Stool233/deepseek-harness`](https://github.com/Stool233/deepseek-harness/tree/9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f) | Vendored Cordis and offline AgentLoop target | `9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f` |
+| [`Stool233/cordis`](https://github.com/Stool233/cordis/tree/fe45fb4d1e89fd6c8ae24399f601a3da9356da8a) | Authoritative TLA+ kit and upstream implementation | `fe45fb4d1e89fd6c8ae24399f601a3da9356da8a` |
+| [`cordiverse/paper`](https://github.com/cordiverse/paper/tree/948a07b369c62adb3b12e102458be5c18dfb69b9) | English paper | `948a07b369c62adb3b12e102458be5c18dfb69b9` |
+| [`Stool233/deepseek-harness`](https://github.com/Stool233/deepseek-harness/tree/7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773) | Vendored Cordis and offline AgentLoop target | `7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773` |
 
 [`study.lock.json`](study.lock.json) is the machine-readable source of truth. It records upstream baselines, fork revisions, paper, dependency-lock and toolchain hashes, scenario counts, required properties, mutations, and observation points. Git submodule links provide the matching browsable snapshots.
 
@@ -49,6 +61,12 @@ npm run reproduce:core
 Use `npm run bootstrap:full` and `npm run reproduce:full` to add the DeepSeek Harness vendored implementation and the keyless, no-network AgentLoop assembly. Bootstrap refuses initialized submodules that are dirty or at the wrong commit; it never resets user work.
 
 Detailed commands and release packaging are in [Reproduction](docs/reproduce.md). Current bounded results and interpretation limits are in [Results](docs/results.md).
+
+## Where the validation runs
+
+The executable specification lives in Cordis, but the primary end-to-end CI entry is this portal's **Conformance** workflow. It runs on manual dispatch, relevant pull requests, and relevant pushes to `main`, then executes `npm run reproduce:full` against both locked trace-plus-fix sources. **Integrity** runs on every push and pull request but does not run TLC. **Nightly** runs at 03:17 UTC every Monday or by manual dispatch and adds the expanded model profile.
+
+The Cordis repository also runs its PR-profile formal workflow on relevant pull requests and pushes to its `main`; DeepSeek Harness runs the vendored conformance job on pull requests. A push to a research branch alone is therefore not the release-quality cross-repository trigger—the portal workflow is. Exact event and command mappings are listed in [Reproduction](docs/reproduce.md#ci-trigger-map).
 
 ## Evidence boundary
 

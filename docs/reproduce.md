@@ -41,6 +41,29 @@ The AgentLoop scenario uses `mountAgentLoopTestDependencies()` and does not requ
 
 Run `npm run verify` again after generation. Present evidence is checked for complete `TraceMatched`, exact scenario and premise sets, four rejected mutations, required model properties, relative paths, and matching implementation revisions.
 
+## CI trigger map
+
+The portal is the primary cross-repository trigger:
+
+| Repository / workflow | Trigger | Runs TLC? | Main command |
+| --- | --- | --- | --- |
+| Portal / `Integrity` | Every push and pull request | No | `npm test` and `npm run verify -- --full` |
+| Portal / `Conformance` | Manual dispatch; relevant pull requests; relevant pushes to `main` | Yes | `npm run reproduce:full` |
+| Portal / `Nightly` | Manual dispatch; Mondays at 03:17 UTC | Yes, expanded profile | `npm run reproduce:nightly`, then `npm run reproduce:full` |
+| Cordis / `Paper conformance` | Relevant pull requests; relevant pushes to Cordis `main` | Yes | `yarn formal:check --quiet` |
+| Cordis / `Paper conformance nightly` | Manual dispatch; daily at 17:23 UTC once the workflow is on the default branch | Yes, expanded profile | `yarn formal:nightly --quiet` |
+| DeepSeek Harness / `Cordis paper conformance` job | Pull requests only | Yes, vendored traces | `pnpm test:cordis-paper` |
+
+The research branches are intentionally not release triggers by push alone: Cordis's PR workflow restricts push events to `main`, and the DeepSeek Harness job has a pull-request condition. In the current personal-fork layout, dispatch the portal `Conformance` workflow or change a locked source on portal `main` to run the complete validation path.
+
+## Branch-specific checks
+
+Use standalone checkouts when comparing variants; switching a portal submodule away from its locked conformance revision makes `npm run verify` fail by design.
+
+- On `research/paper-trace-baseline`, Cordis runs `yarn formal:baseline --quiet`. DeepSeek Harness runs `pnpm test:cordis-paper` with `CORDIS_FORMAL_ROOT` pointing to the matching Cordis baseline checkout. Known mismatches must be reported exactly; an unexpected pass or a new failure is an error.
+- On `research/paper-conformance`, Cordis runs `yarn formal:check --quiet`; DeepSeek Harness runs `pnpm test:cordis-paper` against that Cordis checkout. All required traces and four mutations must pass or be rejected as specified.
+- On `fix/paper-conformance`, run the ordinary Cordis or DeepSeek Harness regression, type, lint, and documentation checks. There is no trace sink on this branch, so it does not run trace refinement directly.
+
 ## Package release evidence
 
 After PR, nightly, and vendored evidence all exist:

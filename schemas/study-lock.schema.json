@@ -10,6 +10,7 @@
     "studyVersion",
     "commitIdentity",
     "repositories",
+    "branchMatrix",
     "paper",
     "references",
     "bootstrap",
@@ -38,6 +39,15 @@
         "cordis": { "$ref": "#/$defs/repository" },
         "paper": { "$ref": "#/$defs/repository" },
         "deepseekHarness": { "$ref": "#/$defs/repository" }
+      }
+    },
+    "branchMatrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cordis", "deepseekHarness"],
+      "properties": {
+        "cordis": { "$ref": "#/$defs/branchSet" },
+        "deepseekHarness": { "$ref": "#/$defs/branchSet" }
       }
     },
     "paper": {
@@ -189,6 +199,43 @@
           "type": "array",
           "items": { "$ref": "#/$defs/rewrite" }
         }
+      }
+    },
+    "branchSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["traceBaseline", "conformance", "upstreamFix"],
+      "properties": {
+        "traceBaseline": { "$ref": "#/$defs/branchVariant" },
+        "conformance": { "$ref": "#/$defs/branchVariant" },
+        "upstreamFix": { "$ref": "#/$defs/branchVariant" }
+      }
+    },
+    "branchVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch",
+        "revision",
+        "traceInstrumentation",
+        "logicFixes",
+        "evidence",
+        "role"
+      ],
+      "properties": {
+        "branch": { "type": "string", "pattern": "^(research|fix)/[a-z0-9][a-z0-9-]*$" },
+        "revision": { "$ref": "#/$defs/revision" },
+        "traceInstrumentation": { "type": "boolean" },
+        "logicFixes": { "type": "boolean" },
+        "evidence": {
+          "type": "string",
+          "enum": [
+            "expected-trace-mismatches",
+            "formal-and-ordinary-tests-pass",
+            "ordinary-tests-pass"
+          ]
+        },
+        "role": { "type": "string", "minLength": 1 }
       }
     },
     "versionOnly": {

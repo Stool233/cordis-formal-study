@@ -11,9 +11,9 @@
       "path": "sources/cordis",
       "upstream": "https://github.com/cordiverse/cordis.git",
       "source": "https://github.com/Stool233/cordis.git",
-      "branch": "research/cordis-formal-study",
-      "baseline": "33cee0c972960eb72b1792b696c6ce897157200c",
-      "revision": "23f5e7d6e4a0cf451567dad1caad7b4049df6992",
+      "branch": "research/paper-conformance",
+      "baseline": "8cc9e33fab69e2d0476d126baaf2acb24e6a6ab4",
+      "revision": "fe45fb4d1e89fd6c8ae24399f601a3da9356da8a",
       "role": "authoritative executable specification and upstream implementation trace target",
       "license": "MIT",
       "ownedCommits": [
@@ -21,7 +21,8 @@
         "36e5ee6065615adb5b25fe098c8e78813a20bdaf",
         "18174ca2b1f8daa90567a78fdb4f83b5a1c7e9d0",
         "a0f8baa9b9abfee73292c525ebcd46103b175b0d",
-        "23f5e7d6e4a0cf451567dad1caad7b4049df6992"
+        "23f5e7d6e4a0cf451567dad1caad7b4049df6992",
+        "fe45fb4d1e89fd6c8ae24399f601a3da9356da8a"
       ],
       "rewrittenCommits": [
         {
@@ -52,15 +53,16 @@
       "path": "sources/deepseek-harness",
       "upstream": "https://github.com/deepseek-ai/deepseek-harness.git",
       "source": "https://github.com/Stool233/deepseek-harness.git",
-      "branch": "research/cordis-formal-study",
-      "baseline": "f9df688cf1a6cd56efe518166f51d29cc8a029f6",
-      "revision": "9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f",
+      "branch": "research/paper-conformance",
+      "baseline": "47f943859bef60e4160492346772ded9b24f765a",
+      "revision": "7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773",
       "role": "vendored Cordis and offline AgentLoop conformance target",
       "license": "MIT",
       "ownedCommits": [
         "8ea7a4aa3f5ffe804f04560ece139b24e19af6d6",
         "a9598b66ee117dd7e8a609c0b6c64fe87c251ad7",
-        "9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f"
+        "9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f",
+        "7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773"
       ],
       "rewrittenCommits": [
         {
@@ -69,6 +71,60 @@
           "subject": "test: verify vendored Cordis paper conformance"
         }
       ]
+    }
+  },
+  "branchMatrix": {
+    "cordis": {
+      "traceBaseline": {
+        "branch": "research/paper-trace-baseline",
+        "revision": "66266245a8dbbaf26f0b9ace45d320edce700eda",
+        "traceInstrumentation": true,
+        "logicFixes": false,
+        "evidence": "expected-trace-mismatches",
+        "role": "paper trace capture over the unmodified upstream runtime"
+      },
+      "conformance": {
+        "branch": "research/paper-conformance",
+        "revision": "fe45fb4d1e89fd6c8ae24399f601a3da9356da8a",
+        "traceInstrumentation": true,
+        "logicFixes": true,
+        "evidence": "formal-and-ordinary-tests-pass",
+        "role": "authoritative formal kit and corrected upstream trace target"
+      },
+      "upstreamFix": {
+        "branch": "fix/paper-conformance",
+        "revision": "3120ba9928bd5fe37e34f50e521077121000f050",
+        "traceInstrumentation": false,
+        "logicFixes": true,
+        "evidence": "ordinary-tests-pass",
+        "role": "trace-free source correction intended for an upstream proposal"
+      }
+    },
+    "deepseekHarness": {
+      "traceBaseline": {
+        "branch": "research/paper-trace-baseline",
+        "revision": "cdbe25a0a62096ddb57af3e7e1c98b6a352fcbdd",
+        "traceInstrumentation": true,
+        "logicFixes": false,
+        "evidence": "expected-trace-mismatches",
+        "role": "paper trace capture over the unmodified vendored runtime"
+      },
+      "conformance": {
+        "branch": "research/paper-conformance",
+        "revision": "7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773",
+        "traceInstrumentation": true,
+        "logicFixes": true,
+        "evidence": "formal-and-ordinary-tests-pass",
+        "role": "corrected vendored runtime, trace validation, and offline AgentLoop evidence"
+      },
+      "upstreamFix": {
+        "branch": "fix/paper-conformance",
+        "revision": "6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3",
+        "traceInstrumentation": false,
+        "logicFixes": true,
+        "evidence": "ordinary-tests-pass",
+        "role": "trace-free source correction intended for an upstream proposal"
+      }
     }
   },
   "paper": {
