@@ -82,7 +82,7 @@
       "repository": "https://github.com/specula-org/Specula.git",
       "commit": "c6aa3dfa41cd4bc7411fae40bd040924c70d9725",
       "version": "1.1.0",
-      "role": "method and interactive trace-debugging reference only"
+      "role": "trace instrumentation, validation, and debugging reference only"
     }
   },
   "bootstrap": {

@@ -41,13 +41,13 @@ refinement mapping 允许 async iterator launch 作为 stuttering，也允许特
 - 报告引用只能是相对 output root 的 POSIX 路径，并且两个临时根中的生成结果必须逐字节相同；
 - 有限实现轨迹只报告 quiescence 与 progress bound，不声称自己证明了无限时域活性。
 
-## 从 etcd 实践到 Specula 工作流
+## Specula 的轨迹验证技术与性质来源
 
-[etcd/raft PR #113](https://github.com/etcd-io/raft/pull/113) 与 [Specula](https://github.com/specula-org/Specula) 不是两套独立方法。前者是面向一个具体项目的 trace-validation 工程实践；Specula 在本研究固定的 revision `c6aa3dfa41cd4bc7411fae40bd040924c70d9725`（v1.1.0）中，通过[工作流说明](https://github.com/specula-org/Specula/blob/c6aa3dfa41cd4bc7411fae40bd040924c70d9725/skills/workflow-overview.md)把这类实践系统化为五个可复用的阶段：源码分析、TLA+ 规格生成、实现 harness 与 NDJSON 轨迹生成、轨迹验证与模型检查，以及在真实系统中确认候选缺陷。固定仓库还收录了 [etcd/raft 规格示例](https://github.com/specula-org/Specula/blob/c6aa3dfa41cd4bc7411fae40bd040924c70d9725/skills/spec_generation/examples/etcdraft.tla)。这些证据共同支持“具体实践→系统方法”的关系，但不能说明 PR #113 本身由 Specula 项目产出。
+[etcd/raft PR #113](https://github.com/etcd-io/raft/pull/113) 是面向具体项目的轨迹验证工程先例。在本研究固定的 revision `c6aa3dfa41cd4bc7411fae40bd040924c70d9725`（v1.1.0）中，[Specula](https://github.com/specula-org/Specula) 提供了一套范围更广的五阶段[工作流](https://github.com/specula-org/Specula/blob/c6aa3dfa41cd4bc7411fae40bd040924c70d9725/skills/workflow-overview.md)：源码分析、代码忠实的 TLA+ 规格生成、实现 harness 与 NDJSON 轨迹生成、轨迹验证与模型检查，以及在真实系统中确认候选缺陷。固定仓库还收录了 [etcd/raft 规格示例](https://github.com/specula-org/Specula/blob/c6aa3dfa41cd4bc7411fae40bd040924c70d9725/skills/spec_generation/examples/etcdraft.tla)。本研究把该 PR 作为工程先例，把 Specula 作为实现插桩、轨迹验证和调试的可复用参考；两者都不是构建依赖。
 
 Specula 的轨迹工作流要求启用 `TraceMatched` property，进行有意义的后状态验证而不是使用 `TRUE` 占位，通过游标完整消费轨迹，并从第一项被拒绝的条件开始分层调试。本研究采用了这套职责划分和调试纪律：`THEOREMS.md` 与观测点清单承担 instrumentation mapping 的角色；trace sink 与场景生成器承担 harness 的角色；`CordisTrace.tla` 完成游标消费和完整后状态比较；保存的反例与回归测试用于实现层确认。
 
-有一项权威规则是有意不同的：etcd 先例与 Specula 都从忠于现有实现的模型出发，而本研究把 Cordis 论文作为语义优先来源，并用 `CordisRuntime` refinement 隔离实现细节。因此，本研究采用的是 Specula 对这类实践的系统化方法，而不是其运行时：Specula 不是 submodule 或 CI 依赖，其仓库没有被修改，Cordis 自己的 `formal/` 目录仍是唯一权威的可执行规格。
+性质来源有意采用了不同规则。Specula 的完整流程会从系统代码及相关工程材料中推断不变量和代码忠实模型。[Murat Demirbas 的评论](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html)指出了由此产生的循环确认风险：从某个实现归纳出的模型本身，并不是该实现符合预期语义的独立陈述。本研究则先从 Cordis 论文的定义、引理和定理中归纳抽象性质，再解释实现轨迹。`CordisRuntime` 负责把代码投影到这台论文驱动的机器，因此实现是验证对象，而不是用于判断它们的性质来源；除非论文依据支持，否则不能通过放宽规格来消除 mismatch。Specula 在这里仅作为轨迹验证与调试参考，不是 submodule 或 CI 依赖；Cordis 自己的 `formal/` 目录仍是唯一权威的可执行规格。
 
 ## 结论解释规则
 

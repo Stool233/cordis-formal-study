@@ -6,13 +6,13 @@ English | [中文](README.zh-CN.md)
 
 An independent, unofficial, reproducible study of the Cordis paper, its upstream implementation, and the vendored Cordis used by DeepSeek Harness. The study combines bounded TLA+ model checking, deterministic implementation-trace validation, and explicit theorem-premise audits.
 
-The authoritative executable specification remains in [`sources/cordis/formal/`](sources/cordis/formal/). This portal pins and explains the source revisions, runs the evidence pipeline, and packages portable results; it does not duplicate or fork the specification.
+The authoritative executable specification remains in [the locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/23f5e7d6e4a0cf451567dad1caad7b4049df6992/formal). This portal pins and explains the source revisions, runs the evidence pipeline, and packages portable results; it does not duplicate or fork the specification.
 
 ## Background
 
 This study is motivated by [etcd/raft PR #113, “TLA+ Trace validation”](https://github.com/etcd-io/raft/pull/113). That work connects two complementary checks: TLC checks the algorithm model, while execution traces check whether the implementation follows the model. Together they provide evidence relating a formal specification to running code.
 
-[Specula](https://github.com/specula-org/Specula) organizes this kind of work into a reusable end-to-end workflow spanning source analysis, TLA+ specifications, implementation instrumentation, trace validation, model checking, and bug confirmation. This study adapts that methodology to the Cordis paper, the upstream Cordis implementation, and the vendored Cordis used by DeepSeek Harness.
+[Specula](https://github.com/specula-org/Specula) provides an automated workflow from code analysis, specification generation, and implementation instrumentation through trace validation, model checking, and bug confirmation. Its full workflow infers invariants and code-faithful TLA+ specifications from system code and related engineering artifacts; as [Murat Demirbas's review of Specula](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html) observes, a model inferred from an implementation cannot by itself serve as independent evidence that the same implementation satisfies its intended semantics. This study deliberately uses a different source of specification authority: definitions, lemmas, and theorems in the Cordis paper determine the abstract properties under validation, while the Cordis and DeepSeek Harness implementations remain subjects of validation. We primarily borrow Specula's ideas for implementation instrumentation, trace generation, TLA+ trace validation, and TLC-driven checking and counterexample diagnosis.
 
 In this adaptation:
 

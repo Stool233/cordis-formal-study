@@ -4,7 +4,7 @@ English | [中文](architecture.zh-CN.md)
 
 ## Ownership
 
-The study has one executable-specification authority: [`sources/cordis/formal/`](../sources/cordis/formal/). The portal does not copy TLA+ modules. It owns source pinning, integrity checks, orchestration, bilingual explanation, and release evidence packaging.
+The study has one executable-specification authority: [the locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/23f5e7d6e4a0cf451567dad1caad7b4049df6992/formal). The portal does not copy TLA+ modules. It owns source pinning, integrity checks, orchestration, bilingual explanation, and release evidence packaging.
 
 ```text
 Cordis paper ───────> Cordis TLA+ abstract machines ───────> bounded TLC reports
@@ -17,7 +17,7 @@ vendored Cordis ── trace sink ┘
 declared theorem premises ─────────────────────────────────> applicability report
 ```
 
-DeepSeek Harness carries only its implementation-side trace hook, vendored hardening, extra scenarios, and a runner that consumes the pinned Cordis kit. [Specula](https://github.com/specula-org/Specula) is the systematized methodology reference, while the [etcd/raft trace-validation precedent](method.md#why-trace-validation) illustrates the concrete engineering practice that Specula generalizes. Neither is a build dependency.
+DeepSeek Harness carries only its implementation-side trace hook, vendored hardening, extra scenarios, and a runner that consumes the pinned Cordis kit. [Specula](https://github.com/specula-org/Specula) is referenced only for implementation instrumentation, trace generation and validation, TLC feedback, and mismatch debugging; it is not the source of Cordis properties or invariants. The [etcd/raft trace-validation precedent](method.md#why-trace-validation) remains the concrete engineering starting point. Neither is a build dependency.
 
 ## Source topology
 

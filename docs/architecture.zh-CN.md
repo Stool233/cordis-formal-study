@@ -4,7 +4,7 @@
 
 ## 权威归属
 
-本研究只有一个可执行规格权威：[`sources/cordis/formal/`](../sources/cordis/formal/)。门户不复制 TLA+ 模块，只负责源码固定、完整性检查、运行编排、双语解释和 Release 证据打包。
+本研究只有一个可执行规格权威：[固定 revision 的 Cordis `formal/` 目录](https://github.com/Stool233/cordis/tree/23f5e7d6e4a0cf451567dad1caad7b4049df6992/formal)。门户不复制 TLA+ 模块，只负责源码固定、完整性检查、运行编排、双语解释和 Release 证据打包。
 
 ```text
 Cordis 论文 ───────> Cordis TLA+ 抽象机器 ───────> 有界 TLC 报告
@@ -17,7 +17,7 @@ vendored Cordis ─ trace sink ┘
 显式定理前提 ───────────────────────────────────> 适用性报告
 ```
 
-DeepSeek Harness 只携带实现侧 trace hook、vendored 加固、额外场景，以及消费固定 Cordis 工具包的 runner。[Specula](https://github.com/specula-org/Specula) 是系统化的方法参考，[etcd/raft 轨迹验证先例](method.zh-CN.md#为什么需要轨迹验证)则展示了 Specula 所归纳的具体工程实践。两者都不是构建依赖。
+DeepSeek Harness 只携带实现侧 trace hook、vendored 加固、额外场景，以及消费固定 Cordis 工具包的 runner。[Specula](https://github.com/specula-org/Specula) 在这里仅作为实现插桩、轨迹生成与验证、TLC 反馈和 mismatch 调试的参考，不是 Cordis 性质或不变量的来源。[etcd/raft 轨迹验证先例](method.zh-CN.md#为什么需要轨迹验证)仍是具体工程起点。两者都不是构建依赖。
 
 ## 源码拓扑
 

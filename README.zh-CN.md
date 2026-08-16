@@ -6,13 +6,13 @@
 
 这是一个独立、非官方、可复现的研究门户，用来研究 Cordis 论文、上游实现，以及 DeepSeek Harness 使用的 vendored Cordis。研究把 TLA+ 有界模型检查、确定性实现轨迹验证和定理前提显式审计组合成一条证据链。
 
-唯一权威的可执行规格仍位于 [`sources/cordis/formal/`](sources/cordis/formal/)。本门户负责固定并解释源码版本、运行证据流程和打包可移植结果，不复制或分叉规格。
+唯一权威的可执行规格仍位于[固定 revision 的 Cordis `formal/` 目录](https://github.com/Stool233/cordis/tree/23f5e7d6e4a0cf451567dad1caad7b4049df6992/formal)。本门户负责固定并解释源码版本、运行证据流程和打包可移植结果，不复制或分叉规格。
 
 ## 研究背景
 
 本研究受 [etcd/raft PR #113「TLA+ Trace validation」](https://github.com/etcd-io/raft/pull/113) 启发。该实践将两类相互衔接的检查结合起来：由 TLC 检查算法模型，再通过执行轨迹检查实现是否遵循模型，从而建立形式化规格与实际代码之间的一致性证据。
 
-[Specula](https://github.com/specula-org/Specula) 进一步将这类工作整理为可复用的端到端流程，覆盖源码分析、TLA+ 规格、实现插桩、轨迹验证、模型检查和缺陷确认。本研究参考这套方法，将其用于 Cordis 论文、上游 Cordis 实现，以及 DeepSeek Harness 中的 vendored Cordis。
+[Specula](https://github.com/specula-org/Specula) 提供了一套从代码分析、规格生成和实现插桩，到轨迹验证、模型检查和缺陷确认的自动化流程。其完整流程会从系统代码及相关工程材料中推断不变量并生成代码忠实的 TLA+ 规格；[Murat Demirbas 对 Specula 的评论](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html)指出，由实现归纳出的模型不能单独充当判断同一实现是否符合预期语义的独立依据。本研究有意采用不同的规格来源：Cordis 论文中的定义、引理和定理决定待检查的抽象性质，Cordis 与 DeepSeek Harness 中的实现仅作为验证对象。我们主要借鉴 Specula 的实现插桩、轨迹生成、TLA+ 轨迹验证，以及 TLC 驱动的检查与反例定位方法。
 
 具体而言：
 
