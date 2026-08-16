@@ -6,10 +6,16 @@
 
 这是一个独立、非官方、可复现的研究门户，用于检查 Cordis 论文、上游 Cordis 实现，以及 DeepSeek Harness 中的 vendored Cordis 是否一致。论文决定待验证的性质；实现是验证对象。[Cordis 固定 revision 的 `formal/` 目录](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal)是唯一权威的可执行规格，本门户负责固定版本、编排复现和解释结果。
 
+## 研究背景
+
+本研究受 [etcd/raft PR #113「TLA+ Trace validation」](https://github.com/etcd-io/raft/pull/113)启发：TLC 检查抽象算法模型，真实执行轨迹检查实现经历的状态与转换能否被模型接受，从而连接规格与代码。
+
+[Specula](https://github.com/specula-org/Specula) 将代码分析、规格生成、插桩、轨迹验证、模型检查和缺陷确认组织成自动化流程。[Murat Demirbas 对 Specula 的评论](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html)强调规格来源独立性对避免循环论证的重要性。本研究从 Cordis 论文的定义、引理和定理中提取待检查的抽象性质，把 Cordis 与 DeepSeek Harness 中的实现作为验证对象，并检查其执行轨迹能否被论文规格接受。我们参考 Specula 的测试插桩、确定性轨迹生成、TLA+ 游标消费与 `TraceMatched`、TLC 检查和反例调试技术。
+
 ## 一分钟结论
 
 - 我们建立了“论文性质 → TLA+ 有界模型 → 实现轨迹 refinement → 普通回归与 mutations”的证据链，并让上游 Cordis 与 vendored Cordis 共用核心场景。
-- 在不修改运行逻辑、只加入测试插桩的 baseline 中，Cordis 精确复现 9 条轨迹 mismatch 和 4 项行为失败；vendored Cordis 精确复现 10 条轨迹 mismatch 和 3 项行为失败。这些是场景级表现，不是 9 个或 10 个独立缺陷。
+- baseline 保留原有运行逻辑，只增加测试插桩。锁定结果为：Cordis 有 9 个轨迹场景发生 mismatch、4 项行为检查失败；vendored Cordis 有 10 个轨迹场景发生 mismatch、3 项行为检查失败。计数单位是场景或行为检查；多个场景可以从不同调度路径暴露同一个底层问题。
 - 调查将结果归纳为两类论文相关偏差：provider recovery/retirement 顺序，以及 lifecycle、target、committed view 的发布顺序；普通回归还发现一项相邻的传递激活调度问题。
 - 加入逻辑修复的 conformance 阶段通过 13 条 Cordis 核心轨迹、17 条 vendored 完整轨迹、29 个观测点、4 个语义 mutant、PR 有界模型和相关普通测试。
 - 面向后续上游 PR 的 upstream-fix 阶段移除了研究插桩，只保留逻辑修复与回归测试。该阶段明确报告 `formalStatus: "not-run"`；它的形式化依据来自包含相同逻辑修复的 conformance revision。
@@ -28,9 +34,9 @@ flowchart LR
 | --- | --- | --- | --- | --- |
 | `baseline` | [`research/paper-trace-baseline` @ `48c4604`](https://github.com/Stool233/cordis/tree/48c4604005b80b4e4fd7706088f5b721a16ea8de) | [`research/paper-trace-baseline` @ `59c8608`](https://github.com/Stool233/deepseek-harness/tree/59c86088a75c4afe99d28244baedaa159231c46c) | `npm run reproduce:baseline` | 只在 9/10 条轨迹 mismatch 和 4/3 项行为失败与 lock 完全一致时返回 0。 |
 | `conformance` | [`research/paper-conformance` @ `112f71c`](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b) | [`research/paper-conformance` @ `8a85249`](https://github.com/Stool233/deepseek-harness/tree/8a85249fc94dc94608937041674950660d787f01) | `npm run reproduce:conformance` | 有界模型、全部轨迹、前提审计、mutations、AgentLoop 与普通回归均通过。 |
-| `upstream-fix` | [`fix/paper-conformance` @ `3120ba9`](https://github.com/Stool233/cordis/tree/3120ba9928bd5fe37e34f50e521077121000f050) | [`fix/paper-conformance` @ `6bb3cdd`](https://github.com/Stool233/deepseek-harness/tree/6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3) | `npm run reproduce:upstream-fix` | 确认不存在 trace/formal 研究代码，并通过普通源码门禁；不宣称直接运行形式化检查。 |
+| `upstream-fix` | [`fix/paper-conformance` @ `3120ba9`](https://github.com/Stool233/cordis/tree/3120ba9928bd5fe37e34f50e521077121000f050) | [`fix/paper-conformance` @ `6bb3cdd`](https://github.com/Stool233/deepseek-harness/tree/6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3) | `npm run reproduce:upstream-fix` | trace/formal 研究代码已移除，普通源码门禁通过，报告记录 `formalStatus: "not-run"`。 |
 
-这三个分支不是互相竞争的成品，而是同一次研究的发现、修复验证和上游提案三个阶段。`study.lock.json` 把阶段顺序、分支角色、完整 SHA 和预期结果写成机器可检查的事实。
+三个分支依次保存研究过程中的三个可复现快照：baseline 记录原实现的观测结果，conformance 记录带插桩的修复验证，upstream-fix 记录移除插桩后的逻辑补丁与回归测试。`study.lock.json` 把阶段顺序、分支角色、完整 SHA 和预期结果写成机器可检查的事实。
 
 ## 发现了什么
 
@@ -40,7 +46,7 @@ flowchart LR
 | Lifecycle、target 与 committed 发布顺序 | 不兼容 target 或 committed provider 可能在相应 lifecycle 转换完成前可见，造成 stale binding。 | Preservation、Resolution coherence、committed lifecycle invariants | 先发布 lifecycle 转换，再暴露 target/committed 变化，并按 provider identity 检查绑定；相关轨迹和 identity mutant 通过。 |
 | 传递激活调度 | 已等待的 provider 返回时，传递 consumer 仍可能停在 `LOADING`。 | 相邻实现调度回归；由论文进展目标启发，但不单独宣称为论文定理反例。 | 移除重复的延迟取消检查点，同时保留 stale activation 失效；普通回归与修复后轨迹通过。 |
 
-顶层独立 effects 的并发恢复以及 `Plugin.provide` 与动态 `ctx.provide()` 的差异也经过调查，但没有被归类为实现缺陷；适用边界见[结果文档](docs/results.zh-CN.md#已调查但未归类为缺陷)。
+对顶层独立 effects 并发恢复，以及 `Plugin.provide` 与动态 `ctx.provide()` 差异的调查，形成了两项适用性边界说明。详情见[结果文档](docs/results.zh-CN.md#已调查但未归类为缺陷)。
 
 ## 按目标复现
 
@@ -72,12 +78,6 @@ npm run bootstrap:study
 4. 再阅读[方法](docs/method.zh-CN.md)和[架构](docs/architecture.zh-CN.md)。
 5. 最后进入[权威 Cordis `formal/` 目录](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal)检查 TLA+ 模块、定理索引和 runner。
 
-## 背景与方法来源
-
-本研究受 [etcd/raft PR #113「TLA+ Trace validation」](https://github.com/etcd-io/raft/pull/113)启发：TLC 检查抽象算法模型，真实执行轨迹则检查实现能否被该模型接受，从而连接规格与代码。
-
-[Specula](https://github.com/specula-org/Specula) 将代码分析、规格生成、插桩、轨迹验证、模型检查和缺陷确认组织成自动化流程。[Murat Demirbas 对 Specula 的评论](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html)提醒，由实现归纳出的模型不能单独作为同一实现符合预期语义的独立依据。本研究因此采用独立的规格来源：Cordis 论文中的定义、引理和定理决定抽象性质，代码只负责产生待验证轨迹。我们借鉴 Specula 的范围主要是测试插桩、确定性轨迹生成、TLA+ 游标消费与 `TraceMatched`、TLC 检查和反例调试，不把 Specula 或实现代码作为 Cordis 不变量的来源。
-
 ## 固定快照与 CI
 
 门户可浏览的 submodule 固定到 conformance revisions：[Cordis `112f71c`](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b)、[英文论文 `948a07b`](https://github.com/cordiverse/paper/tree/948a07b369c62adb3b12e102458be5c18dfb69b9)和 [DeepSeek Harness `8a85249`](https://github.com/Stool233/deepseek-harness/tree/8a85249fc94dc94608937041674950660d787f01)。[`study.lock.json`](study.lock.json) 还固定另外四个阶段 revision、论文 PDF 哈希、工具链、完整预期 mismatch 名称和证据规模。
@@ -86,4 +86,4 @@ npm run bootstrap:study
 
 ## 结论边界
 
-当前结论仅适用于 lock 固定的 revisions、有限模型、显式前提和已采集轨迹。它不是对任意 JavaScript 插件外部副作用、全部调度或无界执行的无条件数学证明；有限轨迹也不能单独证明无限时域活性。
+当前结论构成针对 lock 固定 revisions、有限模型、显式前提和已采集轨迹的一致性证据。覆盖范围止于模型表达的状态、已插桩的实现动作和已运行的调度；任意 JavaScript 插件外部副作用与无界执行仍在范围之外。有限轨迹只检查已观察到的终止与步数，不覆盖无限时域活性。
