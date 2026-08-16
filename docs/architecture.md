@@ -2,49 +2,77 @@
 
 English | [中文](architecture.zh-CN.md)
 
-## Ownership
+## Ownership and evidence flow
 
-The study has one executable-specification authority: [the locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/fe45fb4d1e89fd6c8ae24399f601a3da9356da8a/formal). The portal does not copy TLA+ modules. It owns source pinning, integrity checks, orchestration, bilingual explanation, and release evidence packaging.
+The study has one executable-specification authority: [the `formal/` directory at the Cordis conformance revision](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal). The portal does not copy TLA+ modules. It owns version pinning, stage checkouts, orchestration, report validation, documentation, and Release packaging.
 
 ```text
-Cordis paper ───────> Cordis TLA+ abstract machines ───────> bounded TLC reports
-                              ▲
-                              │ complete post-state refinement
-                              │
-upstream Cordis ── trace sink ┤
-vendored Cordis ── trace sink ┘
+Cordis paper ──> paper-driven TLA+ machines ──> bounded TLC model reports
+                           ▲
+                           │ complete post-state refinement
+                           │
+baseline implementation ─ trace ──> locked counterexample set
+conformance implementation trace ──> all accepted + mutations rejected
 
-declared theorem premises ─────────────────────────────────> applicability report
+same logic fixes ───────────────────> upstream-fix ordinary gates (formalStatus: not-run)
+explicit paper premises ────────────> pass or exact not-applicable
 ```
 
-DeepSeek Harness carries only its implementation-side trace hook, vendored hardening, extra scenarios, and a runner that consumes the pinned Cordis kit. [Specula](https://github.com/specula-org/Specula) is referenced only for implementation instrumentation, trace generation and validation, TLC feedback, and mismatch debugging; it is not the source of Cordis properties or invariants. The [etcd/raft trace-validation precedent](method.md#why-trace-validation) remains the concrete engineering starting point. Neither is a build dependency.
+Properties flow from paper to specification, which then judges implementations. DeepSeek Harness contributes only the vendored implementation, extra scenarios, and a runner consuming the Cordis kit. Specula contributes only trace-instrumentation, validation, and debugging references.
 
-## Source topology
+## Source and stage topology
 
-The three entries under `sources/` are git submodules. Their committed gitlinks must equal the full revisions in [`study.lock.json`](../study.lock.json):
+The three gitlinks under `sources/` provide browsable snapshots:
 
-- `sources/cordis` comes from the personal fork and points to the trace-plus-fix conformance variant containing the authoritative formalization;
-- `sources/paper` comes directly from the upstream English-paper repository;
-- `sources/deepseek-harness` comes from the personal fork and points to the matching trace-plus-fix vendored target.
+- `sources/cordis` pins conformance Cordis `112f71c2…`;
+- `sources/paper` pins upstream English paper `948a07b3…`;
+- `sources/deepseek-harness` pins conformance DeepSeek Harness `8a85249f…`.
 
-The lock's `branchMatrix` records two additional variants for each implementation. `research/paper-trace-baseline` adds observation without changing runtime logic and must reproduce the known mismatches. `fix/paper-conformance` carries the same corrections and ordinary regressions without any trace sink or formal runner. The fixed gitlinks remain on `research/paper-conformance`, which is the only variant used for portal evidence and Release packaging.
+The full study never switches branches inside submodules. `bootstrap:study` reads six SHAs from `researchStages` and `branchMatrix`, fetches them from the personal forks, and creates detached worktrees at:
 
-## Evidence flow
+```text
+.artifacts/checkouts/
+├── cordis/
+│   ├── <baseline-sha>/
+│   ├── <conformance-sha>/
+│   └── <upstream-fix-sha>/
+└── deepseekHarness/
+    ├── <baseline-sha>/
+    ├── <conformance-sha>/
+    └── <upstream-fix-sha>/
+```
 
-The baseline variants establish that the unmodified runtimes are rejected in the affected trace scenarios. The PR profile on the conformance variants first runs schema and source integrity checks, then the Cordis syntax check, bounded models, observation coverage, upstream traces, and four mutations. Full conformance adds the vendored implementation and an offline AgentLoop assembly. The nightly profile expands model constants and adds simulation only when a completed BFS has insufficient diameter.
+Bare object caches live under `.artifacts/repositories/` and never enter a Release. An existing checkout is reused only at the exact clean HEAD; wrong or dirty state fails. The Cordis dependency lock is added only for command execution and then removed so the worktree returns clean.
 
-Each implementation scenario is recorded twice in distinct temporary roots. The two file trees must be byte-identical before one is copied to the requested output root. `CordisTrace.tla` then consumes every line with a cursor. A passing aggregate result requires a non-empty trace, complete consumption, and `pass` for every required property.
+## Stage runners
 
-Negative premise scenarios are separate. Cyclic dependencies, non-independent effects, and non-total provision must report exactly the expected `not-applicable` result. They are not failed positive scenarios and cannot be counted as passes.
+### Baseline
 
-## Portable report interface
+The Cordis baseline runner generates 13 core traces and classifies the locked 9 as `expected-fail`. The DSH runner uses the same Cordis `CordisTrace.tla` to consume vendored traces and locks 10 mismatches among 17. The portal also parses behavior reports, requires exact 4/3 failure sets, and checks each mismatch's trace, failure metadata, and counterexample.
 
-`cordis.paper-*-report/v1` and `cordis.paper-failure/v1` references are normalized POSIX paths relative to the evidence output root. Absolute Unix, macOS, Windows, or UNC paths are rejected throughout JSON and NDJSON. Failure commands replace local directories with `${OUTPUT}`, `${FORMAL_ROOT}`, `${IMPLEMENTATION_ROOT}`, and `${TOOL_CACHE}`.
+### Conformance
 
-Release packaging selects only JSON and NDJSON evidence, source provenance, the study lock, and a content manifest. It excludes JARs, dependency installations, TLC metadirectories, PDFs, and machine paths. The tar/gzip writer normalizes entry order, metadata, ownership, modes, and timestamps so equivalent evidence creates the same bytes.
+The Cordis runner performs portable-report self-tests, TLA+ syntax, PR models, 29-point source coverage, 13 traces, and 4 mutations. The DSH runner executes 17 vendored traces, mutations, and AgentLoop. The portal then runs relevant ordinary gates and validates required properties, `TraceMatched`, and negative-premise statuses.
 
-## Integrity gates
+### Upstream-fix
 
-`npm run verify` checks the JSON Schema, branch-role matrix, every gitlink/lock equality, initialized submodules and their exact clean HEADs, paper hash, personal-fork commit identity, tool hashes, source observation/scenario counts, bilingual documents, local links, license boundaries, and any evidence directories already present. `npm run verify -- --full` additionally requires DeepSeek Harness to be initialized and checks its Cordis pin and source inventory; CI uses this full form.
+The portal first uses tracked-file inventory and package scripts to require the absence of research instrumentation, then runs ordinary Cordis and DSH gates. Its report references stage-two formal evidence. It invokes no `formal/` runner and cannot claim a passing `formalStatus`.
 
-Bootstrap never repairs an initialized submodule. A dirty worktree or mismatched HEAD is an error, because resetting it could destroy work and would hide a provenance mismatch. Only an uninitialized submodule is initialized from the committed gitlink.
+## Report interfaces
+
+The paper kit continues to use `cordis.paper-trace/v1`, `cordis.paper-*-report/v1`, and `cordis.paper-failure/v1`. The portal adds:
+
+- `cordis.formal-study-ordinary-gates/v1` for upstream-fix commands, instrumentation absence, and stage-two rationale;
+- `cordis.formal-study-report/v1` to aggregate the three ordered stages, SHAs, statuses, counts, and report references.
+
+Every JSON/NDJSON reference is a normalized POSIX path relative to `.artifacts` or its evidence output root. Absolute Unix, macOS, Windows, and UNC paths are rejected. `.artifacts/study-report.md` is a reader summary generated from the same aggregate data.
+
+## Integrity and CI
+
+`npm run verify` checks lock schemas, stage order and revision mapping, gitlinks, clean submodules and stage checkouts, paper hash, personal commit identity, Cordis/DSH pins, observation/scenario inventories, report paths, and bilingual links. If stage evidence exists, verify revalidates its semantics.
+
+The Integrity workflow runs no TLC. Conformance runs one manually selected stage or defaults to the full study on pull requests and relevant `main` pushes. Nightly runs all three stages before expanding the model on the conformance Cordis checkout. Release reruns and packages evidence from the same locked sources.
+
+## Release selection boundary
+
+The archive allowlists baseline JSON/NDJSON counterexamples, conformance models/traces/mutations, upstream-fix ordinary reports, nightly evidence, aggregate reports, the lock, and Cordis provenance. It excludes `.artifacts/checkouts`, bare caches, `node_modules`, JARs, TLC metadirectories, PDFs, and machine paths. The manifest must cover payloads from all three stages and nightly; `SHA256SUMS` covers the final gzip.

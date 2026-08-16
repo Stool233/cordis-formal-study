@@ -31,9 +31,9 @@ jobs:
 
       - run: corepack enable
       - run: npm ci
-      - run: npm run bootstrap:full
+      - run: npm run bootstrap:study
+      - run: npm run reproduce:study
       - run: npm run reproduce:nightly
-      - run: npm run reproduce:full
       - run: npm run verify -- --full
 
       - uses: actions/upload-artifact@v7

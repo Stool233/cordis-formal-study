@@ -2,90 +2,139 @@
 
 English | [中文](reproduce.zh-CN.md)
 
-## Requirements
+This guide is the public interface to the three research stages. Read [Research process and results](results.md) first if you only need to understand the conclusions.
 
-- Git with submodule support
-- Node.js 24 with Corepack
-- Java 21
-- network access for initial source, npm, pnpm, Yarn, TLA+ Tools, and CommunityModules downloads
+## Environment and bootstrap
 
-The TLA+ runner fixes Tools 1.8.0 and CommunityModules `202505152026` by SHA-256. JARs remain in a local cache and are never committed or included in a release asset.
-
-## Clone and verify
+Requirements are Node.js 24, Java 21, Git, and Corepack. Initial bootstrap fetches six pinned implementation revisions and dependencies, so it needs network access. The minimal AgentLoop scenario itself makes no external model or network call.
 
 ```sh
 git clone https://github.com/Stool233/cordis-formal-study.git
 cd cordis-formal-study
 npm ci
-npm run bootstrap:core
-npm run verify
+npm run bootstrap:study
 ```
 
-`bootstrap:core` initializes Cordis and the paper, verifies their gitlinks and HEADs, and runs Cordis's immutable Yarn install. Because the source repository does not track its generated `yarn.lock`, the portal verifies [`locks/cordis.yarn.lock`](../locks/cordis.yarn.lock), materializes it only while a Cordis install or evidence command needs Yarn, and removes that temporary copy afterward. A pre-existing identical lock is preserved; different content is rejected rather than overwritten. `bootstrap:full` also initializes DeepSeek Harness and runs its frozen pnpm install.
+`bootstrap:study`:
 
-After a core bootstrap, `npm run verify` checks every committed gitlink and the initialized core source set; DeepSeek Harness content checks are deferred when that submodule is intentionally uninitialized. After a full bootstrap, use `npm run verify -- --full` to require and validate all three source trees. CI uses the full form.
+1. initializes the three browsable conformance/paper submodules and verifies gitlinks, HEADs, dirty state, and the paper hash;
+2. reads the six complete `baseline`, `conformance`, and `upstream-fix` SHAs from `study.lock.json`;
+3. creates detached checkouts under `.artifacts/checkouts/<repository>/<revision>/`;
+4. temporarily injects the pinned `locks/cordis.yarn.lock` for immutable Cordis installs and uses frozen pnpm installs for DeepSeek Harness;
+5. confirms every checkout remains clean and at the exact HEAD after installation.
 
-An already initialized submodule must be clean and exactly at the locked commit. Bootstrap fails rather than resetting, checking out, cleaning, or overwriting it. If this check fails, inspect the submodule and preserve your work manually before retrying.
+An existing checkout that is dirty, at the wrong HEAD, or not a Git checkout is rejected. The tool never resets, checks out over, or overwrites user work.
 
-## Run evidence
+## Reproduce stage one: original implementation divergence
 
 ```sh
-npm run reproduce:core
-npm run reproduce:full
-npm run reproduce:nightly
+npm run reproduce:baseline
 ```
 
-`reproduce:core` writes the Cordis PR-profile output to `.artifacts/cordis-pr`. `reproduce:full` runs the core profile and then writes vendored/AgentLoop conformance to `.artifacts/deepseek-harness`. `reproduce:nightly` writes the expanded Cordis profile to `.artifacts/cordis-nightly`.
+The runner generates traces for Cordis and vendored Cordis, runs `CordisTrace.tla`, and executes baseline behavior probes. It exits zero only when all of these hold:
 
-The AgentLoop scenario uses `mountAgentLoopTestDependencies()` and does not require an API key or provider network. It verifies assembly, dependency resolution, quiescence, and complete teardown.
+- Cordis has exactly the locked 9 trace mismatches and 4 behavior failures;
+- vendored Cordis has exactly 10 trace mismatches and 3 behavior failures;
+- all other positive scenarios pass and the three negative premises report exactly `not-applicable`;
+- every trace is non-empty and every mismatch has failure metadata and a TLC counterexample;
+- revisions, scenario sets, and report-relative paths match.
 
-Run `npm run verify` again after generation. Present evidence is checked for complete `TraceMatched`, exact scenario and premise sets, four rejected mutations, required model properties, relative paths, and matching implementation revisions.
+An expected mismatch unexpectedly passing, a new or missing mismatch, an empty trace, or revision drift fails the command. Exit zero here means “the expected divergence was reproduced,” not “the original implementation conforms to the paper.”
+
+## Reproduce stage two: complete evidence after correction
+
+```sh
+npm run reproduce:conformance
+```
+
+This runs:
+
+- Cordis PR-profile TLA+ syntax, bounded models, 29-point observation coverage, 13 core traces, and 4 mutations;
+- Cordis fiber, HMR, and loader regressions, plus build and lint;
+- 17 complete vendored traces, 4 mutations, three vendored hardening paths, and offline AgentLoop assembly;
+- DeepSeek Harness lifecycle and session-persistence regressions, plus build, lint, and doc-sync;
+- required-property `pass`, exact negative-premise `not-applicable`, complete `TraceMatched`, and portable-report validation.
+
+The stage fails if a required positive property is `not-applicable` or `unobserved`, any mutant survives, or any ordinary gate fails.
+
+## Reproduce stage three: trace-free upstream patch
+
+```sh
+npm run reproduce:upstream-fix
+```
+
+The command first confirms that both fix checkouts contain no trace sink, Cordis `formal/` kit, paper-conformance runner, or related package script. It then runs the ordinary tests, build, lint, and DSH documentation gates relevant to the correction.
+
+The report's `formalStatus` is fixed to `not-run`. It also records the stage-two revisions and evidence paths carrying the same logic fixes, avoiding the false claim that source without instrumentation directly passed TLC trace validation.
+
+## Reproduce the whole study
+
+```sh
+npm run reproduce:study
+npm run verify -- --full
+```
+
+`reproduce:study` runs baseline → conformance → upstream-fix. Its output is:
+
+```text
+.artifacts/
+├── checkouts/
+│   ├── cordis/<revision>/
+│   └── deepseekHarness/<revision>/
+├── stages/
+│   ├── 01-baseline/
+│   │   ├── cordis/
+│   │   └── deepseek-harness/
+│   ├── 02-conformance/
+│   │   ├── cordis/
+│   │   └── deepseek-harness/
+│   └── 03-upstream-fix/
+│       └── ordinary-gates-report.json
+├── study-report.json
+└── study-report.md
+```
+
+`study-report.json` uses `cordis.formal-study-report/v1` for automation. `study-report.md` provides a bilingual reader summary. Neither contains machine-local absolute paths.
+
+## Low-level stage-two profiles
+
+Existing commands remain available:
+
+| Command | Purpose |
+| --- | --- |
+| `npm run bootstrap:core` | Initialize the browsable Cordis and paper submodules and install Cordis. |
+| `npm run bootstrap:full` | Also initialize the browsable DeepSeek Harness submodule. |
+| `npm run reproduce:core` | Run the Cordis PR formal profile on the conformance submodule. |
+| `npm run reproduce:full` | Also run vendored conformance and AgentLoop. |
+| `npm run reproduce:nightly` | Run the expanded nightly model on the stage-two Cordis checkout. |
+
+These are lower-level stage-two profiles and do not replace the three-stage `reproduce:study` command.
 
 ## CI trigger map
 
-The portal is the primary cross-repository trigger:
+| Workflow | Trigger | Work performed |
+| --- | --- | --- |
+| Integrity | Every push and PR | `npm ci`, unit tests, lock/gitlink/schema/document integrity; no TLC. |
+| Conformance | Relevant PR, relevant `main` push, manual | PR/push runs `bootstrap:study` + `reproduce:study`; manual dispatch selects any stage or the default `study`. |
+| Nightly | Monday 03:17 UTC, manual | Full three-stage study, then `reproduce:nightly`. |
+| Release | `v*` tag | Full study, nightly, integrity, evidence packaging, and GitHub Release. |
 
-| Repository / workflow | Trigger | Runs TLC? | Main command |
-| --- | --- | --- | --- |
-| Portal / `Integrity` | Every push and pull request | No | `npm test` and `npm run verify -- --full` |
-| Portal / `Conformance` | Manual dispatch; relevant pull requests; relevant pushes to `main` | Yes | `npm run reproduce:full` |
-| Portal / `Nightly` | Manual dispatch; Mondays at 03:17 UTC | Yes, expanded profile | `npm run reproduce:nightly`, then `npm run reproduce:full` |
-| Cordis / `Paper conformance` | Relevant pull requests; relevant pushes to Cordis `main` | Yes | `yarn formal:check --quiet` |
-| Cordis / `Paper conformance nightly` | Manual dispatch; daily at 17:23 UTC once the workflow is on the default branch | Yes, expanded profile | `yarn formal:nightly --quiet` |
-| DeepSeek Harness / `Cordis paper conformance` job | Pull requests only | Yes, vendored traces | `pnpm test:cordis-paper` |
+Pushing only a Cordis or DeepSeek Harness research branch does not trigger the portal's complete cross-repository study. Portal Conformance and Nightly are the primary entry points.
 
-The research branches are intentionally not release triggers by push alone: Cordis's PR workflow restricts push events to `main`, and the DeepSeek Harness job has a pull-request condition. In the current personal-fork layout, dispatch the portal `Conformance` workflow or change a locked source on portal `main` to run the complete validation path.
+## Release evidence
 
-## Branch-specific checks
-
-Use standalone checkouts when comparing variants; switching a portal submodule away from its locked conformance revision makes `npm run verify` fail by design.
-
-- On `research/paper-trace-baseline`, Cordis runs `yarn formal:baseline --quiet`. DeepSeek Harness runs `pnpm test:cordis-paper` with `CORDIS_FORMAL_ROOT` pointing to the matching Cordis baseline checkout. Known mismatches must be reported exactly; an unexpected pass or a new failure is an error.
-- On `research/paper-conformance`, Cordis runs `yarn formal:check --quiet`; DeepSeek Harness runs `pnpm test:cordis-paper` against that Cordis checkout. All required traces and four mutations must pass or be rejected as specified.
-- On `fix/paper-conformance`, run the ordinary Cordis or DeepSeek Harness regression, type, lint, and documentation checks. There is no trace sink on this branch, so it does not run trace refinement directly.
-
-## Package release evidence
-
-After PR, nightly, and vendored evidence all exist:
+After the full study and nightly pass:
 
 ```sh
 npm run package -- --version 0.1.0
 ```
 
-The command creates:
+This writes `dist/cordis-formal-study-v0.1.0-evidence.tar.gz` and `dist/SHA256SUMS`. The archive includes baseline counterexamples, conformance models/traces/mutations, upstream-fix ordinary gates, nightly evidence, and aggregate reports. It excludes checkouts, dependencies, JARs, TLC temporary directories, PDFs, and machine paths.
 
-- `dist/cordis-formal-study-v0.1.0-evidence.tar.gz`
-- `dist/SHA256SUMS`
+## Common failures
 
-The archive contains reports, traces, mutation counterexamples and failure metadata, provenance, the study lock, and a file manifest. It excludes dependency directories, JARs, TLC metadirectories, PDFs, and machine-local paths. Archive ordering and metadata are deterministic.
-
-## Local Cordis override
-
-DeepSeek Harness's source runner normally receives the portal submodule through `CORDIS_FORMAL_ROOT`. When developing a Cordis change outside this portal, the same DSH command may point to another clean checkout:
-
-```sh
-CORDIS_FORMAL_ROOT=/path/to/cordis \
-  pnpm --dir sources/deepseek-harness test:cordis-paper
-```
-
-Such an override is development evidence only. A portal Release must use the locked gitlink and revision.
+- **Dirty checkout or wrong HEAD:** preserve your work or use a fresh clone; bootstrap will not reset it.
+- **Changed baseline mismatch set:** first confirm the locked revision. If it is correct, the change is new evidence to investigate, not a count to update blindly.
+- **Tool download failure:** first execution needs GitHub access; downloaded content must still match the locked SHA-256.
+- **`not-applicable` in a positive scenario:** positive required properties must pass; only the three dedicated negative-premise scenarios may report exact `not-applicable`.
+- **Instrumentation found in upstream-fix:** remove the research trace/formal file or script rather than disabling the check.

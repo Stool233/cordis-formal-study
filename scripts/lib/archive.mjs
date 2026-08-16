@@ -3,7 +3,14 @@ import { gzipSync } from 'node:zlib'
 import { mkdir, readFile, rm, writeFile } from 'node:fs/promises'
 import { resolve } from 'node:path'
 import { filesUnder, portableReference, readJson, sha256, studyRoot } from './system.mjs'
-import { validateEvidenceOutput, validateReleaseManifest } from './evidence.mjs'
+import {
+  validateBaselineOutput,
+  validateEvidenceOutput,
+  validateOrdinaryGatesReport,
+  validateReleaseManifest,
+  validateStudyReleaseFiles,
+  validateStudyReport,
+} from './evidence.mjs'
 
 function octal(value, width) {
   const encoded = value.toString(8)
@@ -82,30 +89,50 @@ async function evidenceEntries(sourceRoot, destinationRoot) {
 export async function packageEvidence(lock, version) {
   assert.equal(version, lock.studyVersion, `release version must be ${lock.studyVersion}`)
   const roots = {
-    pr: resolve(studyRoot, '.artifacts/cordis-pr'),
+    baselineCordis: resolve(studyRoot, '.artifacts/stages/01-baseline/cordis'),
+    baselineVendored: resolve(studyRoot, '.artifacts/stages/01-baseline/deepseek-harness'),
+    conformanceCordis: resolve(studyRoot, '.artifacts/stages/02-conformance/cordis'),
+    conformanceVendored: resolve(studyRoot, '.artifacts/stages/02-conformance/deepseek-harness'),
+    upstreamFix: resolve(studyRoot, '.artifacts/stages/03-upstream-fix'),
     nightly: resolve(studyRoot, '.artifacts/cordis-nightly'),
-    vendored: resolve(studyRoot, '.artifacts/deepseek-harness'),
   }
-  await validateEvidenceOutput(roots.pr, lock, { role: 'upstream', revision: lock.repositories.cordis.revision, modelProfile: 'pr' })
+  await validateBaselineOutput(roots.baselineCordis, lock, { key: 'cordis', role: 'upstream' })
+  await validateBaselineOutput(roots.baselineVendored, lock, { key: 'deepseekHarness', role: 'vendored-unmodified' })
+  await validateEvidenceOutput(roots.conformanceCordis, lock, {
+    role: 'upstream',
+    revision: lock.branchMatrix.cordis.conformance.revision,
+    modelProfile: 'pr',
+  })
+  await validateEvidenceOutput(roots.conformanceVendored, lock, {
+    role: 'vendored',
+    revision: lock.branchMatrix.deepseekHarness.conformance.revision,
+  })
   await validateEvidenceOutput(roots.nightly, lock, { role: 'upstream', revision: lock.repositories.cordis.revision, modelProfile: 'nightly' })
-  await validateEvidenceOutput(roots.vendored, lock, { role: 'vendored', revision: lock.repositories.deepseekHarness.revision })
+  validateOrdinaryGatesReport(await readJson(resolve(roots.upstreamFix, 'ordinary-gates-report.json')), lock)
+  validateStudyReport(await readJson(resolve(studyRoot, '.artifacts/study-report.json')), lock)
 
   const entries = [
-    ...await evidenceEntries(roots.pr, 'evidence/pr'),
+    ...await evidenceEntries(roots.baselineCordis, 'evidence/baseline/cordis'),
+    ...await evidenceEntries(roots.baselineVendored, 'evidence/baseline/deepseek-harness'),
+    ...await evidenceEntries(roots.conformanceCordis, 'evidence/conformance/cordis'),
+    ...await evidenceEntries(roots.conformanceVendored, 'evidence/conformance/deepseek-harness'),
+    ...await evidenceEntries(roots.upstreamFix, 'evidence/upstream-fix'),
     ...await evidenceEntries(roots.nightly, 'evidence/nightly'),
-    ...await evidenceEntries(roots.vendored, 'evidence/vendored'),
+    { path: 'study-report.json', data: await readFile(resolve(studyRoot, '.artifacts/study-report.json')) },
+    { path: 'study-report.md', data: await readFile(resolve(studyRoot, '.artifacts/study-report.md')) },
     { path: 'study.lock.json', data: await readFile(resolve(studyRoot, 'study.lock.json')) },
     { path: 'provenance/cordis.json', data: await readFile(resolve(studyRoot, 'sources/cordis/formal/provenance.json')) },
   ]
   assert.ok(entries.length > 2, 'no evidence payload was selected')
+  validateStudyReleaseFiles(entries.map(entry => entry.path))
   const payload = entries.map(entry => ({ path: entry.path, sha256: sha256(entry.data), bytes: entry.data.length }))
   const manifest = {
     schema: 'cordis.formal-study-evidence-manifest/v1',
     studyVersion: version,
     sourceRevisions: {
-      cordis: lock.repositories.cordis.revision,
+      cordis: Object.fromEntries(Object.entries(lock.branchMatrix.cordis).map(([key, value]) => [key, value.revision])),
       paper: lock.repositories.paper.revision,
-      deepseekHarness: lock.repositories.deepseekHarness.revision,
+      deepseekHarness: Object.fromEntries(Object.entries(lock.branchMatrix.deepseekHarness).map(([key, value]) => [key, value.revision])),
     },
     files: payload,
   }

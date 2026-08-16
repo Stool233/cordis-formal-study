@@ -11,6 +11,7 @@
     "commitIdentity",
     "repositories",
     "branchMatrix",
+    "researchStages",
     "paper",
     "references",
     "bootstrap",
@@ -49,6 +50,11 @@
         "cordis": { "$ref": "#/$defs/branchSet" },
         "deepseekHarness": { "$ref": "#/$defs/branchSet" }
       }
+    },
+    "researchStages": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/researchStage" }
     },
     "paper": {
       "type": "object",
@@ -236,6 +242,67 @@
           ]
         },
         "role": { "type": "string", "minLength": 1 }
+      }
+    },
+    "researchStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "order",
+        "branchRole",
+        "traceInstrumentation",
+        "logicFixes",
+        "expectedOutcome",
+        "repositories"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["baseline", "conformance", "upstream-fix"]
+        },
+        "order": { "type": "integer", "minimum": 1 },
+        "branchRole": {
+          "type": "string",
+          "enum": ["traceBaseline", "conformance", "upstreamFix"]
+        },
+        "traceInstrumentation": { "type": "boolean" },
+        "logicFixes": { "type": "boolean" },
+        "expectedOutcome": {
+          "type": "string",
+          "enum": [
+            "expected-mismatch-reproduced",
+            "formal-and-tests-pass",
+            "ordinary-tests-pass"
+          ]
+        },
+        "repositories": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cordis", "deepseekHarness"],
+          "properties": {
+            "cordis": { "$ref": "#/$defs/stageRepository" },
+            "deepseekHarness": { "$ref": "#/$defs/stageRepository" }
+          }
+        }
+      }
+    },
+    "stageRepository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "traceMismatches", "behaviorFailures"],
+      "properties": {
+        "revision": { "$ref": "#/$defs/revision" },
+        "traceMismatches": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "behaviorFailures": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
       }
     },
     "versionOnly": {

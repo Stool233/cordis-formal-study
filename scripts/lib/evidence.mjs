@@ -12,6 +12,13 @@ function exactNames(actual, expected, label) {
   assert.deepEqual([...actual].sort(), [...expected].sort(), `${label} set differs from study.lock.json`)
 }
 
+function validatePrerequisites(actual, prerequisiteAudits) {
+  assert.ok(Array.isArray(actual), 'conformance report has no prerequisite audits')
+  const expected = Object.fromEntries(prerequisiteAudits.map(item => [item.name, { [item.property]: item.status }]))
+  const observed = Object.fromEntries(actual.map(item => [item.name, item.properties]))
+  assert.deepEqual(observed, expected, 'prerequisite audit results differ from the required not-applicable results')
+}
+
 function allPass(properties, label) {
   record(properties, `${label}.properties`)
   assert.ok(Object.keys(properties).length > 0, `${label} has no observed properties`)
@@ -69,10 +76,53 @@ export function validateConformanceReport(report, expectedScenarioNames, prerequ
     portableReference(scenario.trace)
     allPass(scenario.properties, `scenario ${scenario.name}`)
   }
-  assert.ok(Array.isArray(report.prerequisites), 'conformance report has no prerequisite audits')
-  const expected = Object.fromEntries(prerequisiteAudits.map(item => [item.name, { [item.property]: item.status }]))
-  const actual = Object.fromEntries(report.prerequisites.map(item => [item.name, item.properties]))
-  assert.deepEqual(actual, expected, 'prerequisite audit results differ from the required not-applicable results')
+  validatePrerequisites(report.prerequisites, prerequisiteAudits)
+}
+
+export function validateBaselineConformanceReport(report, options) {
+  record(report, 'baseline conformance report')
+  assert.equal(report.schema, 'cordis.paper-conformance-report/v1')
+  record(report.generatedFrom, 'baseline conformance generatedFrom')
+  assert.equal(report.generatedFrom.revision, options.revision, 'baseline report has the wrong implementation revision')
+  assert.equal(report.generatedFrom.role, options.role, 'baseline report has the wrong implementation role')
+  assert.equal(report.traceMatched, 'expected-fail', 'baseline aggregate must remain expected-fail')
+  assert.ok(Array.isArray(report.scenarios), 'baseline report has no scenarios')
+  exactNames(report.scenarios.map(scenario => scenario.name), options.scenarios, 'baseline scenario')
+  const mismatches = []
+  for (const scenario of report.scenarios) {
+    record(scenario, 'baseline scenario')
+    assert.ok(Number.isInteger(scenario.events) && scenario.events > 0, `${scenario.name} produced an empty trace`)
+    portableReference(scenario.trace)
+    if (scenario.traceMatched === 'expected-fail') {
+      mismatches.push(scenario.name)
+      record(scenario.properties, `${scenario.name}.properties`)
+      assert.ok(Object.keys(scenario.properties).length > 0, `${scenario.name} has no observed properties`)
+      for (const [property, status] of Object.entries(scenario.properties)) {
+        assert.equal(status, 'expected-fail', `${scenario.name}.${property} must remain expected-fail`)
+      }
+    } else {
+      assert.equal(scenario.traceMatched, 'pass', `${scenario.name} has an unexpected trace status`)
+      allPass(scenario.properties, `baseline scenario ${scenario.name}`)
+    }
+  }
+  exactNames(mismatches, options.traceMismatches, 'baseline trace mismatch')
+  validatePrerequisites(report.prerequisites, options.prerequisites)
+}
+
+export function validateBaselineBehaviorReport(report, options) {
+  record(report, 'baseline behavior report')
+  assert.equal(report.schema, 'cordis.paper-baseline-behavior/v1')
+  record(report.implementation, 'baseline behavior implementation')
+  assert.equal(report.implementation.revision, options.revision, 'baseline behavior report has the wrong implementation revision')
+  exactNames(report.expectedFailures, options.behaviorFailures, 'baseline expected behavior failure')
+  assert.ok(Array.isArray(report.results) && report.results.length > 0, 'baseline behavior report has no results')
+  const failures = []
+  for (const result of report.results) {
+    record(result, 'baseline behavior result')
+    if (result.status === 'expected-fail') failures.push(result.name)
+    else assert.equal(result.status, 'pass', `${result.name} has an unexpected behavior status`)
+  }
+  exactNames(failures, options.behaviorFailures, 'baseline behavior failure')
 }
 
 export function validateMutationReport(report, mutations) {
@@ -87,7 +137,7 @@ export function validateMutationReport(report, mutations) {
   }
 }
 
-async function parseSerialized(path) {
+export async function parseSerialized(path) {
   const content = await readFile(path, 'utf8')
   if (path.endsWith('.ndjson')) {
     const lines = content.trim().split('\n').filter(Boolean)
@@ -101,6 +151,47 @@ async function parseSerialized(path) {
     })
   }
   return JSON.parse(content)
+}
+
+export async function validateBaselineOutput(outputRoot, lock, options) {
+  for (const name of ['generation-report.json', 'conformance-report.json', 'baseline-behavior-report.json']) {
+    assert.equal(await exists(resolve(outputRoot, name)), true, `${outputRoot}/${name} is missing`)
+  }
+  const expectedScenarios = options.key === 'deepseekHarness'
+    ? [...lock.evidence.coreScenarios, ...lock.evidence.deepseekScenarios]
+    : lock.evidence.coreScenarios
+  const stage = lock.researchStages.find(candidate => candidate.id === 'baseline')
+  assert.ok(stage, 'baseline research stage is missing')
+  const expected = stage.repositories[options.key]
+  const conformance = await readJson(resolve(outputRoot, 'conformance-report.json'))
+  validateBaselineConformanceReport(conformance, {
+    revision: expected.revision,
+    role: options.role,
+    scenarios: expectedScenarios,
+    traceMismatches: expected.traceMismatches,
+    prerequisites: lock.evidence.prerequisiteAudits,
+  })
+  validateBaselineBehaviorReport(await readJson(resolve(outputRoot, 'baseline-behavior-report.json')), {
+    revision: expected.revision,
+    behaviorFailures: expected.behaviorFailures,
+  })
+  for (const scenario of conformance.scenarios) {
+    const reference = portableReference(scenario.trace)
+    const trace = resolve(outputRoot, reference)
+    assert.equal(await exists(trace), true, `${reference} is missing`)
+    const lines = await parseSerialized(trace)
+    assert.ok(lines.every(line => line.tag === 'trace'), `${reference} contains a non-trace record`)
+  }
+  for (const name of expected.traceMismatches) {
+    assert.equal(await exists(resolve(outputRoot, `failures/trace-${name}.json`)), true, `failure metadata for ${name} is missing`)
+    assert.equal(await exists(resolve(outputRoot, `counterexamples/trace-${name}.json`)), true, `counterexample for ${name} is missing`)
+  }
+  await assertPortableEvidence(outputRoot)
+  return {
+    scenarios: conformance.scenarios.length,
+    traceMismatches: expected.traceMismatches.length,
+    behaviorFailures: expected.behaviorFailures.length,
+  }
 }
 
 export async function assertPortableEvidence(outputRoot) {
@@ -147,6 +238,61 @@ export async function validateEvidenceOutput(outputRoot, lock, options) {
   return { scenarios: conformance.scenarios.length, mutations: mutation.results.length }
 }
 
+export function validateOrdinaryGatesReport(report, lock) {
+  record(report, 'ordinary gates report')
+  assert.equal(report.schema, 'cordis.formal-study-ordinary-gates/v1')
+  assert.equal(report.stage, 'upstream-fix')
+  assert.equal(report.status, 'pass')
+  assert.equal(report.formalStatus, 'not-run', 'upstream-fix must not claim direct formal validation')
+  assert.equal(report.formalEvidence.stage, 'conformance')
+  for (const key of ['cordis', 'deepseekHarness']) {
+    const conformance = lock.branchMatrix[key].conformance
+    const upstreamFix = lock.branchMatrix[key].upstreamFix
+    assert.equal(report.formalEvidence[key].revision, conformance.revision)
+    portableReference(report.formalEvidence[key].report)
+    const repository = report.repositories[key]
+    assert.equal(repository.revision, upstreamFix.revision)
+    assert.equal(repository.instrumentation, 'absent')
+    assert.ok(Array.isArray(repository.commands) && repository.commands.length > 0, `${key} has no ordinary gates`)
+    for (const command of repository.commands) {
+      assert.equal(command.status, 'pass', `${key}.${command.name} did not pass`)
+      assert.ok(typeof command.command === 'string' && command.command, `${key}.${command.name} has no command`)
+    }
+  }
+  const absolute = absolutePathAt(report)
+  assert.equal(absolute, undefined, `ordinary gates report contains an absolute path at ${absolute}`)
+}
+
+export function validateStudyReport(report, lock) {
+  record(report, 'study report')
+  assert.equal(report.schema, 'cordis.formal-study-report/v1')
+  assert.equal(report.studyVersion, lock.studyVersion)
+  assert.equal(report.status, 'pass')
+  assert.deepEqual(report.stages.map(stage => stage.id), ['baseline', 'conformance', 'upstream-fix'])
+  const formalStatuses = ['expected-fail', 'pass', 'not-run']
+  for (let index = 0; index < lock.researchStages.length; index++) {
+    const expected = lock.researchStages[index]
+    const actual = report.stages[index]
+    assert.equal(actual.order, expected.order)
+    assert.equal(actual.status, expected.expectedOutcome)
+    assert.equal(actual.formalStatus, formalStatuses[index])
+    for (const key of ['cordis', 'deepseekHarness']) {
+      assert.equal(actual.repositories[key].revision, expected.repositories[key].revision)
+      portableReference(actual.repositories[key].report)
+    }
+  }
+  assert.equal(report.stages[0].repositories.cordis.traceMismatches, 9)
+  assert.equal(report.stages[0].repositories.deepseekHarness.traceMismatches, 10)
+  assert.equal(report.stages[0].repositories.cordis.behaviorFailures, 4)
+  assert.equal(report.stages[0].repositories.deepseekHarness.behaviorFailures, 3)
+  assert.equal(report.stages[1].repositories.cordis.scenarios, lock.evidence.coreScenarioCount)
+  assert.equal(report.stages[1].repositories.deepseekHarness.scenarios, lock.evidence.fullScenarioCount)
+  assert.equal(report.stages[1].repositories.cordis.mutations, lock.evidence.mutationCount)
+  assert.equal(report.stages[1].repositories.deepseekHarness.mutations, lock.evidence.mutationCount)
+  const absolute = absolutePathAt(report)
+  assert.equal(absolute, undefined, `study report contains an absolute path at ${absolute}`)
+}
+
 export function validateReleaseManifest(manifest, files) {
   record(manifest, 'release manifest')
   assert.equal(manifest.schema, 'cordis.formal-study-evidence-manifest/v1')
@@ -162,4 +308,21 @@ export function validateReleaseManifest(manifest, files) {
     declared.add(entry.path)
   }
   assert.deepEqual([...declared].sort(), [...actual].sort(), 'release manifest does not cover every payload file')
+}
+
+export function validateStudyReleaseFiles(files) {
+  const requiredPrefixes = [
+    'evidence/baseline/cordis/',
+    'evidence/baseline/deepseek-harness/',
+    'evidence/conformance/cordis/',
+    'evidence/conformance/deepseek-harness/',
+    'evidence/upstream-fix/',
+    'evidence/nightly/',
+  ]
+  for (const prefix of requiredPrefixes) {
+    assert.ok(files.some(path => path.startsWith(prefix)), `release payload is missing ${prefix}`)
+  }
+  for (const path of ['study-report.json', 'study-report.md', 'study.lock.json', 'provenance/cordis.json']) {
+    assert.ok(files.includes(path), `release payload is missing ${path}`)
+  }
 }

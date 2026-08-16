@@ -2,90 +2,139 @@
 
 [English](reproduce.md) | 中文
 
-## 环境要求
+本指南提供三阶段研究的公开接口。若只想理解结果，先阅读[研究过程与结果](results.zh-CN.md)。
 
-- 支持 submodule 的 Git
-- 带 Corepack 的 Node.js 24
-- Java 21
-- 首次下载源码、npm/pnpm/Yarn 依赖、TLA+ Tools 和 CommunityModules 时可访问网络
+## 环境与初始化
 
-TLA+ runner 用 SHA-256 固定 Tools 1.8.0 和 CommunityModules `202505152026`。JAR 只保留在本地 cache，绝不会被提交或进入 Release asset。
-
-## Clone 与完整性验证
+需要 Node.js 24、Java 21、Git 和 Corepack。首次 bootstrap 会取得六个固定实现 revision 并安装依赖，因此需要网络。场景中的最小 AgentLoop 本身不调用外部模型或网络服务。
 
 ```sh
 git clone https://github.com/Stool233/cordis-formal-study.git
 cd cordis-formal-study
 npm ci
-npm run bootstrap:core
-npm run verify
+npm run bootstrap:study
 ```
 
-`bootstrap:core` 初始化 Cordis 与论文，验证 gitlink 和 HEAD，并执行 Cordis immutable Yarn install。由于源码仓库不跟踪生成的 `yarn.lock`，门户会验证 [`locks/cordis.yarn.lock`](../locks/cordis.yarn.lock)，仅在 Cordis 安装或证据命令需要 Yarn 时将其放入源码树，命令结束后删除临时副本；若已有内容相同的 lock 则予以保留，内容不同则拒绝覆盖。`bootstrap:full` 还会初始化 DeepSeek Harness，并执行 frozen pnpm install。
+`bootstrap:study` 会：
 
-完成 core bootstrap 后，`npm run verify` 会检查所有已提交 gitlink 和已初始化的核心源码集；若 DeepSeek Harness submodule 被有意保持为未初始化，其内容检查会暂缓。完成 full bootstrap 后，使用 `npm run verify -- --full` 要求并验证全部三个源码树。CI 使用 full 形式。
+1. 初始化三个可浏览的 conformance/paper submodules，并验证 gitlink、HEAD、dirty 状态和论文哈希；
+2. 从 `study.lock.json` 读取 `baseline`、`conformance` 和 `upstream-fix` 的六个完整 SHA；
+3. 在 `.artifacts/checkouts/<repository>/<revision>/` 创建 detached checkout；
+4. 向 Cordis checkout 临时注入固定 `locks/cordis.yarn.lock` 并执行 immutable install，对 DeepSeek Harness 执行 frozen pnpm install；
+5. 安装完成后再次确认 checkout clean 且 HEAD 精确匹配。
 
-已经初始化的 submodule 必须 clean，且精确位于 lock 中的 commit。bootstrap 不会 reset、checkout、clean 或覆盖它，而是直接失败。如果检查失败，应先手动检查 submodule 并保留自己的工作，再重试。
+已有 checkout 如果 dirty、HEAD 错误，或不是 Git checkout，会立即失败。工具不会 reset、checkout 或覆盖用户工作。
 
-## 运行证据
+## 复现阶段一：原实现的不一致
 
 ```sh
-npm run reproduce:core
-npm run reproduce:full
-npm run reproduce:nightly
+npm run reproduce:baseline
 ```
 
-`reproduce:core` 把 Cordis PR profile 输出到 `.artifacts/cordis-pr`。`reproduce:full` 运行 core profile，再把 vendored/AgentLoop 一致性输出到 `.artifacts/deepseek-harness`。`reproduce:nightly` 把扩大后的 Cordis profile 输出到 `.artifacts/cordis-nightly`。
+runner 对 Cordis 和 vendored Cordis 分别生成轨迹，运行 `CordisTrace.tla`，并执行 baseline 行为 probes。命令只有在以下条件全部满足时才返回 0：
 
-AgentLoop 场景使用 `mountAgentLoopTestDependencies()`，不需要 API key 或 provider network。它验证装配、依赖解析、quiescence 与完整 teardown。
+- Cordis 恰好出现 lock 中的 9 条轨迹 mismatch 和 4 项行为失败；
+- vendored Cordis 恰好出现 10 条轨迹 mismatch 和 3 项行为失败；
+- 其他正向场景通过，三项负前提精确为 `not-applicable`；
+- 每条轨迹非空，所有 mismatch 都有 failure metadata 与 TLC counterexample；
+- revision、场景集合和报告中的相对路径均匹配。
 
-生成后再次运行 `npm run verify`。验证器会检查完整 `TraceMatched`、精确的场景与前提集合、四个被拒绝的 mutations、required model properties、相对路径，以及匹配的实现 revision。
+预期 mismatch 意外通过、新增 mismatch、遗漏 mismatch、空轨迹或 revision 漂移都会使命令失败。这里的退出码 0 表示“成功复现预期不一致”，不是“原实现符合论文”。
+
+## 复现阶段二：逻辑修复后的完整证据
+
+```sh
+npm run reproduce:conformance
+```
+
+该命令运行：
+
+- Cordis PR profile 的 TLA+ 语法、有界模型、29 个观测点覆盖、13 条核心轨迹和 4 个 mutations；
+- Cordis fiber、HMR、loader 普通回归，以及 build/lint；
+- vendored Cordis 的 17 条完整轨迹、4 个 mutations、三条本地加固路径和离线 AgentLoop 装配；
+- DeepSeek Harness lifecycle、session-persistence 回归，以及 build/lint/doc-sync；
+- required properties 的 `pass`、负前提的精确 `not-applicable`、完整 `TraceMatched` 和可移植报告检查。
+
+任一 required property 为 `not-applicable`/`unobserved`、任一 mutant 未被拒绝，或任一普通门禁失败，阶段二都会失败。
+
+## 复现阶段三：无插桩上游补丁
+
+```sh
+npm run reproduce:upstream-fix
+```
+
+该命令先确认两个 fix checkout 不含 trace sink、Cordis `formal/`、paper conformance runner 或相关 package script，再运行与阶段二修复相关的普通测试、build、lint 和 DSH 文档门禁。
+
+输出报告的 `formalStatus` 固定为 `not-run`。报告同时记录阶段二中承载相同逻辑修复的 revision 与证据路径，避免把“没有形式化工具”误写为“直接通过 TLC”。
+
+## 一次复现完整研究
+
+```sh
+npm run reproduce:study
+npm run verify -- --full
+```
+
+`reproduce:study` 按 baseline → conformance → upstream-fix 顺序执行。输出结构为：
+
+```text
+.artifacts/
+├── checkouts/
+│   ├── cordis/<revision>/
+│   └── deepseekHarness/<revision>/
+├── stages/
+│   ├── 01-baseline/
+│   │   ├── cordis/
+│   │   └── deepseek-harness/
+│   ├── 02-conformance/
+│   │   ├── cordis/
+│   │   └── deepseek-harness/
+│   └── 03-upstream-fix/
+│       └── ordinary-gates-report.json
+├── study-report.json
+└── study-report.md
+```
+
+`study-report.json` 使用 `cordis.formal-study-report/v1`，用于自动化；`study-report.md` 用双语摘要说明三个阶段的结果。两者都不包含本机绝对路径。
+
+## 阶段二的低层 profile
+
+为保持已有使用方式，以下命令继续存在：
+
+| 命令 | 用途 |
+| --- | --- |
+| `npm run bootstrap:core` | 只初始化可浏览的 Cordis 与 paper submodules，并安装 Cordis。 |
+| `npm run bootstrap:full` | 再初始化可浏览的 DeepSeek Harness submodule。 |
+| `npm run reproduce:core` | 在 conformance submodule 上运行 Cordis PR formal profile。 |
+| `npm run reproduce:full` | 再运行 vendored conformance 与 AgentLoop。 |
+| `npm run reproduce:nightly` | 在阶段二 Cordis checkout 上运行扩大后的 nightly 模型。 |
+
+这些是阶段二的底层 profile，不代替三阶段的 `reproduce:study`。
 
 ## CI 触发映射
 
-门户是主要的跨仓触发入口：
+| Workflow | 触发 | 执行内容 |
+| --- | --- | --- |
+| Integrity | 每次 push 与 PR | `npm ci`、单元测试、lock/gitlink/schema/文档完整性；不执行 TLC。 |
+| Conformance | 相关 PR、`main` 的相关 push、手动 | PR/push 默认运行 `bootstrap:study` + `reproduce:study`；手动可选四个阶段入口。 |
+| Nightly | 每周一 03:17 UTC、手动 | 完整三阶段，然后 `reproduce:nightly`。 |
+| Release | `v*` tag | 完整三阶段、nightly、完整性检查、证据打包和 GitHub Release。 |
 
-| 仓库 / workflow | 触发条件 | 是否运行 TLC | 主要命令 |
-| --- | --- | --- | --- |
-| 门户 / `Integrity` | 每次 push 和 pull request | 否 | `npm test` 与 `npm run verify -- --full` |
-| 门户 / `Conformance` | 手动触发；相关 pull request；`main` 的相关 push | 是 | `npm run reproduce:full` |
-| 门户 / `Nightly` | 手动触发；每周一 03:17 UTC | 是，扩大 profile | `npm run reproduce:nightly`，随后运行 `npm run reproduce:full` |
-| Cordis / `Paper conformance` | 相关 pull request；Cordis `main` 的相关 push | 是 | `yarn formal:check --quiet` |
-| Cordis / `Paper conformance nightly` | 手动触发；workflow 位于默认分支后每天 17:23 UTC | 是，扩大 profile | `yarn formal:nightly --quiet` |
-| DeepSeek Harness / `Cordis paper conformance` job | 仅 pull request | 是，vendored 轨迹 | `pnpm test:cordis-paper` |
+只向 Cordis 或 DeepSeek Harness 的 research 分支 push 不等于触发门户的完整跨仓研究流程。门户 Conformance/Nightly 是主入口。
 
-research 分支有意不把单独 push 当作 Release 触发条件：Cordis 的 PR workflow 只在 `main` 接受 push 事件，DeepSeek Harness 相关 job 也带有 pull-request 条件。在当前个人 fork 布局中，应手动触发门户 `Conformance` workflow，或通过门户 `main` 的固定源码变更触发完整验证主流程。
+## Release 证据
 
-## 分支专用检查
-
-比较变体时应使用独立 checkout；如果把门户 submodule 切离 lock 固定的一致性 revision，`npm run verify` 会按设计失败。
-
-- 在 `research/paper-trace-baseline` 上，Cordis 运行 `yarn formal:baseline --quiet`；DeepSeek Harness 运行 `pnpm test:cordis-paper`，并让 `CORDIS_FORMAL_ROOT` 指向匹配的 Cordis 基线 checkout。已知 mismatch 必须精确报告；意外通过或新增失败都属于错误。
-- 在 `research/paper-conformance` 上，Cordis 运行 `yarn formal:check --quiet`；DeepSeek Harness 对该 Cordis checkout 运行 `pnpm test:cordis-paper`。全部 required 轨迹必须通过，四个 mutations 必须按要求被拒绝。
-- 在 `fix/paper-conformance` 上，运行 Cordis 或 DeepSeek Harness 的普通回归、类型、lint 和文档检查。该分支没有 trace sink，因此不直接运行轨迹 refinement。
-
-## 打包 Release 证据
-
-PR、nightly 和 vendored 证据全部存在后运行：
+在完整研究和 nightly 已成功后运行：
 
 ```sh
 npm run package -- --version 0.1.0
 ```
 
-命令会创建：
+生成 `dist/cordis-formal-study-v0.1.0-evidence.tar.gz` 和 `dist/SHA256SUMS`。证据包含 baseline 反例、conformance 模型/轨迹/mutations、upstream-fix 普通门禁、nightly 和聚合报告；不包含 checkouts、依赖、JAR、TLC 临时目录、PDF 或本机路径。
 
-- `dist/cordis-formal-study-v0.1.0-evidence.tar.gz`
-- `dist/SHA256SUMS`
+## 常见失败
 
-归档包含报告、轨迹、mutation counterexamples 与 failure metadata、provenance、study lock 和文件 manifest；依赖目录、JAR、TLC metadir、PDF 与本机路径会被排除。归档条目顺序和元数据是确定性的。
-
-## 本地 Cordis override
-
-DeepSeek Harness 源码 runner 通常通过 `CORDIS_FORMAL_ROOT` 接收门户 submodule。在门户外开发 Cordis 修改时，同一个 DSH 命令也可指向另一 clean checkout：
-
-```sh
-CORDIS_FORMAL_ROOT=/path/to/cordis \
-  pnpm --dir sources/deepseek-harness test:cordis-paper
-```
-
-这种 override 只属于开发证据。门户 Release 必须使用 lock 固定的 gitlink 与 revision。
+- **checkout dirty 或错误 HEAD**：保存自己的改动，或自行使用一个新 clone；bootstrap 不会替你 reset。
+- **baseline mismatch 集合变化**：先检查是否用了 lock 中的 revision。若 revision 正确，这代表需要调查的新证据，不能直接更新计数掩盖。
+- **工具下载失败**：首次运行需要访问 GitHub；下载内容仍必须通过 lock 中的 SHA-256。
+- **`not-applicable` 出现在正向场景**：正向 required property 必须为 `pass`；只有三个专门的负前提场景允许精确的 `not-applicable`。
+- **upstream-fix 报告插桩残留**：删除研究 trace/formal 文件或 scripts，不能把检测规则关闭。

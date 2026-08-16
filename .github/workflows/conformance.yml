@@ -2,6 +2,17 @@ name: Conformance
 
 on:
   workflow_dispatch:
+    inputs:
+      stage:
+        description: Research stage to reproduce
+        required: true
+        default: study
+        type: choice
+        options:
+          - baseline
+          - conformance
+          - upstream-fix
+          - study
   pull_request:
     paths:
       - '.github/workflows/conformance.yml'
@@ -34,7 +45,9 @@ permissions:
 jobs:
   conformance:
     runs-on: ubuntu-latest
-    timeout-minutes: 30
+    timeout-minutes: 60
+    env:
+      RESEARCH_STAGE: ${{ inputs.stage || 'study' }}
     steps:
       - uses: actions/checkout@v6
         with:
@@ -54,14 +67,14 @@ jobs:
 
       - run: corepack enable
       - run: npm ci
-      - run: npm run bootstrap:full
-      - run: npm run reproduce:full
+      - run: npm run bootstrap:study
+      - run: npm run "reproduce:${RESEARCH_STAGE}"
       - run: npm run verify -- --full
 
       - uses: actions/upload-artifact@v7
         if: always()
         with:
-          name: conformance-evidence
+          name: research-${{ env.RESEARCH_STAGE }}-evidence
           path: .artifacts/
           include-hidden-files: true
           if-no-files-found: warn

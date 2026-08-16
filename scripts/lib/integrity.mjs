@@ -4,10 +4,19 @@ import { dirname, resolve } from 'node:path'
 import {
   assertHash,
   assertGitlink,
+  validateBaselineOutput,
   validateEvidenceOutput,
+  validateOrdinaryGatesReport,
+  validateStudyReport,
   validateSubmoduleState,
 } from './evidence.mjs'
 import { validateSchema } from './schema.mjs'
+import {
+  checkoutRoot,
+  requireStageCheckout,
+  stageRepositoryKeys,
+  validateResearchStages,
+} from './stages.mjs'
 import {
   exists,
   filesUnder,
@@ -66,6 +75,7 @@ export async function loadStudyLock() {
     readJson(resolve(studyRoot, 'schemas/study-lock.schema.json')),
   ])
   validateSchema(lock, schema)
+  validateResearchStages(lock)
   assert.equal(lock.evidence.coreScenarioCount, lock.evidence.coreScenarios.length)
   assert.equal(lock.evidence.mutationCount, lock.evidence.mutations.length)
   assert.equal(
@@ -282,6 +292,9 @@ async function validatePortalFiles() {
     '.github/workflows/nightly.yml',
     '.github/workflows/release.yml',
     'scripts/study.mjs',
+    'scripts/lib/stages.mjs',
+    'schemas/study-report.schema.json',
+    'schemas/ordinary-gates-report.schema.json',
     'test/study.test.mjs',
   ]) {
     assert.equal(await exists(resolve(studyRoot, path)), true, `${path} is missing`)
@@ -291,8 +304,19 @@ async function validatePortalFiles() {
     assert.ok(workflow.includes('uses: actions/upload-artifact@v7'), `${path} must use upload-artifact v7`)
     assert.ok(workflow.includes('include-hidden-files: true'), `${path} must upload the hidden evidence root`)
   }
+  const conformance = await readFile(resolve(studyRoot, '.github/workflows/conformance.yml'), 'utf8')
+  for (const value of ['baseline', 'conformance', 'upstream-fix', 'study', 'npm run bootstrap:study', 'reproduce:${RESEARCH_STAGE}', 'timeout-minutes: 60']) {
+    assert.ok(conformance.includes(value), `conformance workflow does not expose ${value}`)
+  }
+  const nightly = await readFile(resolve(studyRoot, '.github/workflows/nightly.yml'), 'utf8')
+  assert.ok(nightly.includes('npm run reproduce:study'), 'nightly must reproduce all three stages')
+  assert.ok(nightly.includes('npm run reproduce:nightly'), 'nightly must run the expanded stage-two model')
+  const integrity = await readFile(resolve(studyRoot, '.github/workflows/integrity.yml'), 'utf8')
+  assert.equal(integrity.includes('reproduce:'), false, 'integrity must not execute TLC reproduction')
   const release = await readFile(resolve(studyRoot, '.github/workflows/release.yml'), 'utf8')
   assert.ok(release.includes('uses: actions/upload-artifact@v7'), 'release workflow must use upload-artifact v7')
+  assert.ok(release.includes('npm run reproduce:study'), 'release must include all three research stages')
+  assert.ok(release.includes('npm run reproduce:nightly'), 'release must include nightly model evidence')
 }
 
 async function validateLicenses(lock, states) {
@@ -317,6 +341,68 @@ async function validateExistingEvidence(lock) {
     if ((await filesUnder(root)).length === 0) continue
     await validateEvidenceOutput(root, lock, options)
   }
+
+  const baselineRoot = resolve(studyRoot, '.artifacts/stages/01-baseline')
+  if ((await filesUnder(baselineRoot)).length > 0) {
+    await validateBaselineOutput(resolve(baselineRoot, 'cordis'), lock, { key: 'cordis', role: 'upstream' })
+    await validateBaselineOutput(resolve(baselineRoot, 'deepseek-harness'), lock, {
+      key: 'deepseekHarness',
+      role: 'vendored-unmodified',
+    })
+  }
+
+  const conformanceRoot = resolve(studyRoot, '.artifacts/stages/02-conformance')
+  if ((await filesUnder(conformanceRoot)).length > 0) {
+    await validateEvidenceOutput(resolve(conformanceRoot, 'cordis'), lock, {
+      role: 'upstream',
+      revision: lock.branchMatrix.cordis.conformance.revision,
+      modelProfile: 'pr',
+    })
+    await validateEvidenceOutput(resolve(conformanceRoot, 'deepseek-harness'), lock, {
+      role: 'vendored',
+      revision: lock.branchMatrix.deepseekHarness.conformance.revision,
+    })
+  }
+
+  const ordinaryPath = resolve(studyRoot, '.artifacts/stages/03-upstream-fix/ordinary-gates-report.json')
+  if (await exists(ordinaryPath)) {
+    const report = await readJson(ordinaryPath)
+    validateSchema(report, await readJson(resolve(studyRoot, 'schemas/ordinary-gates-report.schema.json')))
+    validateOrdinaryGatesReport(report, lock)
+  }
+
+  const studyReportPath = resolve(studyRoot, '.artifacts/study-report.json')
+  if (await exists(studyReportPath)) {
+    const report = await readJson(studyReportPath)
+    validateSchema(report, await readJson(resolve(studyRoot, 'schemas/study-report.schema.json')))
+    validateStudyReport(report, lock)
+    assert.equal(await exists(resolve(studyRoot, '.artifacts/study-report.md')), true, 'study-report.md is missing')
+    for (const stage of report.stages) {
+      for (const repository of Object.values(stage.repositories)) {
+        assert.equal(
+          await exists(resolve(studyRoot, '.artifacts', portableReference(repository.report))),
+          true,
+          `${repository.report} is missing`,
+        )
+      }
+    }
+  }
+}
+
+async function validateExistingStageCheckouts(lock) {
+  let found = false
+  for (const stage of lock.researchStages) {
+    for (const key of stageRepositoryKeys) {
+      if (await exists(checkoutRoot(lock, stage.id, key))) {
+        found = true
+        await requireStageCheckout(lock, stage.id, key)
+      }
+    }
+  }
+  if (!found) return
+  for (const stage of lock.researchStages) {
+    for (const key of stageRepositoryKeys) await requireStageCheckout(lock, stage.id, key)
+  }
 }
 
 /** Validate the portal lock, initialized sources, documentation, and generated evidence. */
@@ -339,6 +425,7 @@ export async function verifyPortal(options = {}) {
     validateLicenses(lock, states),
   ])
   if (states.deepseekHarness.initialized) await validateDeepSeekSource(lock)
+  await validateExistingStageCheckouts(lock)
   if (options.evidence !== false) await validateExistingEvidence(lock)
   return {
     full: states.deepseekHarness.initialized,

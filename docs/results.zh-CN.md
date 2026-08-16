@@ -1,20 +1,77 @@
-# 结果与边界
+# 研究过程与结果
 
 [English](results.md) | 中文
 
-## 检查的 revision 集合
+本文按研究发生的三个阶段解释“发现了什么、如何确认、如何修复，以及哪一份代码适合后续上游评审”。精确 revision 和预期集合以 [`study.lock.json`](../study.lock.json) 为准。
 
-当前门户固定 Cordis `fe45fb4d1e89fd6c8ae24399f601a3da9356da8a`、英文论文 `948a07b369c62adb3b12e102458be5c18dfb69b9`，以及 DeepSeek Harness `7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773`。
+## 阶段总览
 
-## 基线对比
+| 阶段 | 插桩 | 逻辑修复 | 预期结论 |
+| --- | --- | --- | --- |
+| `baseline` | 有 | 无 | 原实现必须精确复现锁定的 mismatch；意外通过也算研究结果漂移。 |
+| `conformance` | 有 | 有 | TLC 模型、轨迹 refinement、前提审计、mutations、AgentLoop 和普通回归全部通过。 |
+| `upstream-fix` | 无 | 有 | 只验证逻辑补丁和普通门禁；形式化状态固定为 `not-run`，并指回阶段二。 |
 
-仅轨迹分支保留上游和 vendored 运行时逻辑。预期失败 runner 记录 Cordis 的 9 个受影响轨迹场景和 vendored 版本的 10 个受影响场景。普通回归还独立暴露出上游 Cordis 的 4 项失败和 vendored 基线的 3 项失败：provider 资源在异步 consumer 完成前被撤回；并发 root disposal 期间，正在退休的 consumer 过早消失；已等待的 provider 返回时，传递激活尚未结算。上游 Cordis 还无法在 disposal 抢先于延迟激活时 drain pending effect，而 vendored 基线此前已有的生命周期加固已能通过该项。
+论文固定在 `948a07b369c62adb3b12e102458be5c18dfb69b9`，`paper.pdf` SHA-256 为 `4d48478d…a49db97f`。三阶段使用的六个实现 SHA 见 [README 的阶段表](../README.zh-CN.md#三阶段研究流程)。
 
-这些数字表示受影响的场景和检查数量，并不是独立缺陷数量。多个场景会通过不同的依赖、identity、realm 或 confluence 路径到达同一个生命周期顺序 mismatch。
+## 阶段一：在原运行逻辑上复现不一致
 
-## 有界模型结果
+baseline 分支只加入同步、测试专用的 trace sink、稳定逻辑 ID、场景和预期失败 runner。运行时生命周期、解析、恢复和调度逻辑保持原样。验证成功的标准不是“全部绿色”，而是实际失败集合与 lock 完全一致。
 
-PR profile 已在等价的固定文件树上通过以下 TLC 探索：
+### 轨迹 mismatch
+
+Cordis 的 9 条 mismatch 是：
+
+1. `provider-consumer-reverse-exit`
+2. `async-consumer-teardown-guard`
+3. `concurrent-root-teardown-guard`
+4. `provider-identity-replacement`
+5. `dependency-loss-during-iteration`
+6. `dependency-return-during-unload`
+7. `isolation-realms`
+8. `confluence-left`
+9. `confluence-right`
+
+vendored Cordis 复现同一组 mismatch，并增加 `deepseek-agent-loop-assembly`，共 10 条。其余正向场景仍必须通过；三项负前提仍必须精确报告 `not-applicable`。因此，baseline 不允许通过空轨迹、把全部性质标成预期失败，或忽略新出现的 mismatch。
+
+### 普通行为失败
+
+| 行为检查 | Cordis | Vendored Cordis |
+| --- | --- | --- |
+| `provider-resources-outlive-asynchronous-consumers` | expected-fail | expected-fail |
+| `retiring-consumers-remain-discoverable` | expected-fail | expected-fail |
+| `disposal-invalidates-deferred-reload` | expected-fail | pass |
+| `awaited-provider-settles-transitive-activation` | expected-fail | expected-fail |
+
+vendored 基线此前已有的本地生命周期加固使 `disposal-invalidates-deferred-reload` 通过，因此其行为失败数是 3 而不是 4。9/10 和 4/3 都是场景或检查数量，不代表独立缺陷数量。
+
+## 三项 finding
+
+### 1. Provider recovery 与 retirement ordering
+
+原实现可以在异步 consumer teardown 完成前启动 provider accumulator 的 inverse。与此同时，正在退休的 consumer 可能过早离开 runtime list，使并发 teardown 无法继续被 provider 发现。这违反论文所要求的恢复精确性、provider/consumer episode 嵌套顺序，以及 retirement 可见性约束。
+
+修复保留 retiring consumer，直到其生命周期达到 quiescence；provider 在恢复自己的 accumulator 前等待已通知 dependents 退出。`provider-consumer-reverse-exit`、异步与并发 teardown、依赖丢失/恢复和 AgentLoop 装配从同一底层顺序问题的不同路径确认修复。
+
+### 2. Lifecycle、target 与 committed view 的发布顺序
+
+原实现可能先暴露 target 或 committed provider 的变化，之后才完成与之兼容的 lifecycle 转换。相同服务值还可能掩盖 provider identity 已经替换，允许 stale committed binding 在观察状态中短暂存在。这与 Preservation、Resolution coherence，以及 committed lifecycle 的状态不变量冲突。
+
+修复把 lifecycle 转换作为发布屏障：先进入兼容状态，再更新 target 或 committed view；绑定稳定性按 provider identity 而不是仅按值比较。provider replacement、iteration 中依赖丢失、unloading 中依赖恢复、realm 隔离与 confluence 轨迹共同覆盖该行为。
+
+### 3. 传递激活调度回归
+
+普通回归在第一次形式化修复之后发现：连续两个延迟取消检查点会让已等待的 provider 返回时，传递 consumer 仍停留在 `LOADING`。这是一项与进展目标相邻的实现调度问题，但本研究不把它单独宣称为某条论文定理的反例。
+
+修复只保留一个延迟取消检查点。这样 disposal 仍能让 stale activation 失效，而已等待 mount 的调用方会看到传递激活已经结算。对应普通测试在 conformance 和 upstream-fix 阶段都运行。
+
+## 阶段二：修复后建立一致性证据
+
+conformance 分支保留同一套插桩并加入上述逻辑修复。通过条件包含模型、实现轨迹和普通测试，而不是只看某一个报告。
+
+### 有界模型
+
+PR profile 的固定探索结果为：
 
 | 模型 | 结果 | Distinct states | BFS 直径 |
 | --- | --- | ---: | ---: |
@@ -24,38 +81,42 @@ PR profile 已在等价的固定文件树上通过以下 TLC 探索：
 | Runtime refinement | pass | 66 | 11 |
 | Confluence product | pass | 364,816 | 41 |
 
-模型报告覆盖 `WriteLocality`、`LifoRecovery`、`RecoveryExactness`、`IndependentExchangeInvariant`、`Preservation`、`Ordering`、`ResolutionCoherence`、`Progress`、`RuntimeRefinesPaper`、`CanonicalTerminalEquality` 和 `EventuallyCanonical`。实现轨迹另外检查 `ProgressBound`。
+模型覆盖效应局部性与 LIFO 恢复、Preservation、Recovery exactness、Ordering、Resolution coherence、Progress、runtime refinement 和 canonical terminal equality。有限实现轨迹另外检查 quiescence 与 `ProgressBound`；它们不被描述为无限时域活性证明。
 
-## 轨迹与 mutation 结果
+### 实现证据
 
-lock 中有 13 条核心轨迹和四条 DeepSeek Harness 额外轨迹，因此 vendored 版本共运行 17 条。每条 required 正向轨迹必须非空、字节稳定、被 `TraceMatched` 完整消费，且不能出现 `not-applicable` 或 `unobserved`。三项负前提审计必须返回精确预期的 `not-applicable`。
+| 证据 | Cordis | Vendored Cordis |
+| --- | ---: | ---: |
+| 正向轨迹场景 | 13 | 17 |
+| 完整 `TraceMatched` | 13 | 17 |
+| 观测写入点 | 29 | 29（同一核心清单） |
+| 被拒绝 mutants | 4 | 4 |
 
-源码声明的 29 个写入观测点全部得到覆盖。以下四个 mutant 均会被拒绝：
+每条轨迹必须非空、完整消费，并对每个声明的正向性质报告 `pass`。循环依赖、非独立 effects 和非 total provision 三项负前提必须分别精确报告 `not-applicable`。
 
-| Mutation | 必须检测到的问题 |
-| --- | --- |
-| 移除 unload guard | provider inverse 在 dependent teardown 完成前开始。 |
-| 按值比较 target | 相同值掩盖 provider identity 已改变。 |
-| 使用 FIFO 恢复 | effect accumulator 违反 LIFO 恢复。 |
-| 保留 stale committed provider | 已失效 provider 仍在 committed view 中可见。 |
+四个 mutant 分别移除 unload guard、按值比较 target、改成 FIFO 恢复，以及允许 stale committed provider。任一 mutant 未被拒绝都会使阶段二失败。DeepSeek Harness 还运行重入 dispose、pending effect、异步 cleanup join 和无网络 AgentLoop 装配。
 
-## 发现的实现偏差
+## 阶段三：形成可上游评审的补丁
 
-轨迹 refinement 确认了两项与论文有关的实现偏差。第一，provider recovery 可能在异步 dependent teardown 完成前开始，而且过早从 runtime list 移除会隐藏并发退休的 consumer。第二，依赖 target 与 committed view 的变化可能先于兼容的生命周期转换而变得可观察。实现现在会保留正在退休的 consumer 直至 quiescence，在 provider recovery 前等待已通知的 dependents，并先发布生命周期转换，再暴露不兼容的 target 或 committed view。论文规格没有为了接受旧顺序而被削弱。
+`fix/paper-conformance` 分支从研究成果中只保留生命周期/调度逻辑修复和普通回归测试。门禁首先检查以下内容不存在：trace sink、`formal/` 工具包、Cordis paper runner，以及相应 package scripts。随后运行：
 
-普通回归在首次形式化通过后又发现一项相邻的调度缺陷：连续两个激活检查点会使已等待的 provider 返回时，传递 consumer 仍处于 `LOADING`。修正后的实现只保留一个延迟取消检查点，因此 disposal 仍可使 stale activation 失效，而传递激活会在已等待的 mount 返回前结算。
+- Cordis fiber、HMR、loader 回归，以及 build 和 lint；
+- DeepSeek Harness lifecycle、session-persistence 回归，以及 build、lint 和双语文档门禁。
 
-独立顶层 effect recovery 已经过调查，但不归类为论文偏差。每个 effect iterator 内的 recovery 是串行 LIFO；不同顶层 wrapper 在显式 `PairwiseIndependent` 前提下按注册逆序启动并并发 join。因此，session-persistence admission 与 backend closure 这类需要完成顺序的 cleanup 操作会共享同一个 accumulator，而不是依赖全局 wrapper 串行化。
+该阶段生成 `cordis.formal-study-ordinary-gates/v1` 报告，`formalStatus` 必须是 `not-run`。它不假装一份没有插桩的源码能直接产生轨迹 refinement 证据；报告明确指向阶段二中包含相同逻辑修复的 Cordis 与 DeepSeek Harness revisions。
 
-静态 `Plugin.provide` 元数据不会被直接假定成论文 provision。目前的运行时 provision 证据来自受控 `ctx.provide()` episode，并带有稳定 logical key 和 realm identity。因此，`TotalProvision` 只适用于 harness 已闭合全部 provider 的场景。
+## 已调查但未归类为缺陷
 
-## 结果不证明什么
+### 独立顶层 effect 的并发恢复
 
-这是针对固定 revision、有限状态空间、声明前提和生成轨迹的 refinement 证据。它不证明：
+单个 effect iterator 内的 inverse 按 LIFO 串行执行。不同顶层 wrapper 在 `PairwiseIndependent` 前提成立时，可以按注册逆序启动并并发 join。需要严格完成顺序的 cleanup 必须进入同一个 accumulator，而不能依赖所有顶层 wrapper 全局串行。现有实现和论文前提在这一边界内可以一致解释，因此没有作为缺陷修复。
 
-- 任意 opaque 文件、网络、进程或设备 effects 两两独立，且 inverse 一定精确；
-- 一条有限 quiescent 轨迹可以证明无界 JavaScript 执行的活性；
-- 未被 observation point 或 scenario 表达的插件行为已经覆盖；
-- 定理所需的无环依赖、有限名称、有界 iterator、独立性、total provision 或 no-failure 前提为假时，结论仍然成立。
+### `Plugin.provide` 与 `ctx.provide()`
 
-Release workflow 会把 required property 非 `pass`、轨迹行缺失、mutant 被接受，或负前提结果不精确，全部视为阻塞式失败。
+论文中的静态 provision 集合不能直接等同于尚未参与核心解析逻辑的 `Plugin.provide` 元数据。本研究的 provision 轨迹来自受控 `ctx.provide()` episode，并记录稳定 logical key、provider identity 和 realm。因此 `TotalProvision` 只对场景 harness 已闭合的 provider 集合适用；超出该范围会报告不适用或未覆盖，而不是伪造通过。
+
+## 结论边界
+
+结果只说明固定 revisions 在有限模型、显式前提和已采集轨迹上满足已检查性质。它不覆盖任意 opaque 文件、网络、进程或设备副作用，不证明任意 effect 都独立或 inverse 都精确，也不把有限 quiescent 轨迹当作无界活性证明。完整规格、定理映射和 refinement 规则仍需要人工审阅与独立复核。
+
+下一步可按[复现指南](reproduce.zh-CN.md)运行三个阶段；更底层的性质来源和状态投影见[方法](method.zh-CN.md)与[架构](architecture.zh-CN.md)。

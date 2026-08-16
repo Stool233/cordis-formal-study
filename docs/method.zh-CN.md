@@ -2,55 +2,50 @@
 
 [English](method.md) | 中文
 
-## 为什么需要轨迹验证
+## 性质从哪里来
 
-TLC 可以探索 TLA+ 抽象机器的有限状态空间，但模型检查通过并不等于生产代码实现了同一台机器。普通实现测试能够验证若干预期结果，却通常没有定义从每个相关运行时状态到抽象状态的完整投影。
+本研究先阅读 Cordis 论文，再观察代码。论文中的定义、引理和定理决定抽象状态、允许的转换和待检查的性质；`THEOREMS.md` 将论文页码、TLA+ operator、实现观测点与适用前提连接起来。代码只负责提供待解释的实现状态和轨迹，不能反过来决定用什么性质判断自己。
 
-[etcd/raft PR #113](https://github.com/etcd-io/raft/pull/113) 是弥合这一缺口的主要工程先例。它区分算法正确性与实现一致性，在实现中观测算法相关状态和转换，再由轨迹规格约束模型检查器沿实现真实运行的路径前进。若核心状态机拒绝某个状态或转换，就得到规格与实现不一致的证据。该 PR 说明其思路来自 [Microsoft CCF 的共识轨迹验证](https://github.com/microsoft/CCF/tree/main/tla/consensus)。
+这一顺序避免自证循环：如果规格完全由同一实现归纳，再用它证明实现符合规格，所得结论缺少独立的语义来源。发现 mismatch 后，先判断论文模型、refinement mapping 或实现哪一层有误；只有论文依据支持时才修改规格。确认是实现偏差时，保留最小反例并修复实现。
 
-这个先例的重要价值在于，其评审讨论没有把轨迹验证简化为日志回放，而是指出了真正困难的部分：
+## 三层证据
 
-- 轨迹被拒绝并不能自动判定是实现错误还是模型过时；
-- 分布式观测必须保留足够的 happens-before 信息，才能讨论全局行为；
-- 规格动作与实现操作不必具有完全相同的粒度；
-- stuttering 和 nondeterminism 必须被有意建模；
-- 插桩应尽量低风险、只在测试时开启，并且其他维护者也能复现。
+### 1. 论文抽象机器的有界模型检查
 
-## 如何用于 Cordis 与 DeepSeek Harness
+`CordisEffects.tla`、`CordisKernel.tla`、`CordisRuntime.tla` 和 `CordisConfluence.tla` 分别检查效应恢复、论文生命周期规则、实现 refinement 与多调度终态。TLC 在 PR 和 nightly 两组有限常量下检查安全不变量、死锁、排名上界和在显式公平性下的有界活性目标。
 
-Cordis 与 Raft 不同。关键交错发生在同一 JavaScript runtime 内的 fibers、依赖解析、异步 effect iterators、retirement 和 inverse execution 之间，而不是复制节点之间。在受控场景中，一个 root-context 逻辑序号因此足够表达顺序：所有与论文有关的观测都通过同一个测试专用 sink 同步发出。recorder 使用稳定逻辑 ID，不使用墙上时钟；同一场景在两个不同临时目录中必须生成逐字节相同的 NDJSON。
+有界通过表示该配置中没有找到反例，不等于任意规模的无条件证明。nightly 扩大 fiber、binding、iteration 和注册深度；只有 BFS 完成但直径不足时才补充 simulation。
 
-这项研究还以一篇包含明确定义、引理和定理的论文为起点，因此论文是规格优先来源。确认不匹配属于实现偏差后，工作流保留最小反例并修复实现；不能仅为了接受当前行为而放宽规格。
+### 2. 实现轨迹 refinement
 
-三个分支使这一诊断过程可以审计。仅轨迹基线分支保留原运行时逻辑，并把观测到的 mismatch 分类为预期失败；一致性分支应用修复并保留插桩，因此 TLC 轨迹与普通回归必须同时通过；仅逻辑修复分支移除全部研究插桩，只保留修复和普通测试，供后续上游评审。形式化通过结论只针对一致性分支；仅逻辑修复分支的形式化依据来自一致性分支中接受相同检查的同一组修复。
+测试专用 trace sink 在 root context 内同步记录 lifecycle、target、committed view、fiber 创建/退休/移除、effect iteration landing、inverse 和 service provision/withdrawal。recorder 使用稳定逻辑 ID 和逻辑序号，不记录时间戳。每条 `cordis.paper-trace/v1` NDJSON 记录携带完整抽象后状态。
 
-迁移后的方法有三层证据：
+`CordisTrace.tla` 用游标逐条消费轨迹。异步 iterator launch 可以作为严格受限的 stuttering；landing 对应论文 transition。实现的多个微步骤也可以映射为一个论文步骤，但 silent 解释必须由观测事件和有限辅助状态约束。`TraceMatched` 只有在全部记录被消费、每个完整后状态匹配时才通过，不能退化为 `TRUE`。
 
-1. TLC 在有界 PR 与 nightly 配置中检查 `CordisEffects`、`CordisKernel`、`CordisRuntime` 和 `CordisConfluence`。
-2. `CordisTrace` 用游标完整消费每条非空 `cordis.paper-trace/v1` NDJSON，并比较每一步的完整抽象后状态。上游与 vendored Cordis 共享核心场景。
-3. `AcyclicDependencies`、`FiniteNames`、`BoundedIterator`、`PairwiseIndependent`、`TotalProvision` 和 `NoFailure` 都是显式前提。前提为假时，依赖它的结论报告 `not-applicable`。
+### 3. 前提审计
 
-refinement mapping 允许 async iterator launch 作为 stuttering，也允许特定实现操作合并为一次论文转换。这些 silent interpretation 必须绑定具体观测事件和有限辅助状态。`uid = null`、runtime list removal 与 lifecycle transition timing 不能成为任意未观测行为的借口。
+`AcyclicDependencies`、`FiniteNames`、`BoundedIterator`、`PairwiseIndependent`、`TotalProvision` 和 `NoFailure` 是显式前提。有限轨迹不能自动证明所有前提，因此循环依赖、非独立 effects 和非 total provision 使用独立负场景。前提为假时，依赖性质必须报告 `not-applicable`，不能计为 pass。
 
-## 本研究增加的更强检查
+## 观测完整性与敏感性
 
-以下设计不只是采用轨迹验证的宽泛想法：
+源码门禁固定 29 个 lifecycle、epoch/target、committed store、`uid`、registry 与 service store 写入点，防止新写入绕过 trace sink。每个场景在两个临时根生成证据并要求字节一致，报告引用只能使用相对 POSIX 路径。
 
-- 每条记录都携带完整抽象后状态，而不仅是事件标签；
-- AST/源码门禁清点 lifecycle、epoch/target、committed state、`uid`、registry 和 service 的 29 个写入点；
-- 四个语义 mutant 必须被拒绝，证明验证器能识别 unload ordering、provider identity、LIFO recovery 和 stale committed provider 错误；
-- confluence 在两种生命周期调度下比较 canonical terminal state；
-- 报告引用只能是相对 output root 的 POSIX 路径，并且两个临时根中的生成结果必须逐字节相同；
-- 有限实现轨迹只报告 quiescence 与 progress bound，不声称自己证明了无限时域活性。
+四个 semantic mutations 用于证明验证器不是恒真：移除 unload guard、按值而非 provider identity 比较 target、FIFO 恢复和 stale committed provider 都必须被模型或轨迹拒绝。
 
-## Specula 的轨迹验证技术与性质来源
+## 三阶段诊断纪律
 
-[etcd/raft PR #113](https://github.com/etcd-io/raft/pull/113) 是面向具体项目的轨迹验证工程先例。在本研究固定的 revision `c6aa3dfa41cd4bc7411fae40bd040924c70d9725`（v1.1.0）中，[Specula](https://github.com/specula-org/Specula) 提供了一套范围更广的五阶段[工作流](https://github.com/specula-org/Specula/blob/c6aa3dfa41cd4bc7411fae40bd040924c70d9725/skills/workflow-overview.md)：源码分析、代码忠实的 TLA+ 规格生成、实现 harness 与 NDJSON 轨迹生成、轨迹验证与模型检查，以及在真实系统中确认候选缺陷。固定仓库还收录了 [etcd/raft 规格示例](https://github.com/specula-org/Specula/blob/c6aa3dfa41cd4bc7411fae40bd040924c70d9725/skills/spec_generation/examples/etcdraft.tla)。本研究把该 PR 作为工程先例，把 Specula 作为实现插桩、轨迹验证和调试的可复用参考；两者都不是构建依赖。
+baseline 只加入观测，保存原逻辑及其精确反例；conformance 加入修复并要求形式化与普通门禁一起通过；upstream-fix 去除研究插桩，只保留补丁和回归。这样可以分别回答：原实现是否真的被规格拒绝、修复是否被同一证据接受、以及上游评审实际需要查看哪些产品代码。
 
-Specula 的轨迹工作流要求启用 `TraceMatched` property，进行有意义的后状态验证而不是使用 `TRUE` 占位，通过游标完整消费轨迹，并从第一项被拒绝的条件开始分层调试。本研究采用了这套职责划分和调试纪律：`THEOREMS.md` 与观测点清单承担 instrumentation mapping 的角色；trace sink 与场景生成器承担 harness 的角色；`CordisTrace.tla` 完成游标消费和完整后状态比较；保存的反例与回归测试用于实现层确认。
+upstream-fix 不直接产生形式化结论。其 `formalStatus` 固定为 `not-run`，并通过精确 revision 指向阶段二中的同逻辑修复。该关系由 lock 和报告校验，而不是只写在说明文字中。
 
-性质来源有意采用了不同规则。Specula 的完整流程会从系统代码及相关工程材料中推断不变量和代码忠实模型。[Murat Demirbas 的评论](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html)指出了由此产生的循环确认风险：从某个实现归纳出的模型本身，并不是该实现符合预期语义的独立陈述。本研究则先从 Cordis 论文的定义、引理和定理中归纳抽象性质，再解释实现轨迹。`CordisRuntime` 负责把代码投影到这台论文驱动的机器，因此实现是验证对象，而不是用于判断它们的性质来源；除非论文依据支持，否则不能通过放宽规格来消除 mismatch。Specula 在这里仅作为轨迹验证与调试参考，不是 submodule 或 CI 依赖；Cordis 自己的 `formal/` 目录仍是唯一权威的可执行规格。
+## etcd/raft 与 Specula 的借鉴范围
 
-## 结论解释规则
+[etcd/raft PR #113](https://github.com/etcd-io/raft/pull/113) 是本研究的直接工程先例：它把“模型本身是否满足性质”和“实现轨迹是否被模型接受”拆成相互衔接的义务，并讨论了动作粒度、stuttering、happens-before 与模型过时等实际问题。
 
-证据支持的是精确且有限的陈述：对于 lock 固定的源码 revision、有限模型配置、声明的前提和已采集的确定性轨迹，验证没有发现反例，并且每条被接受的实现轨迹都 refine 到所检查的论文机器。它不证明任意插件外部副作用、无界 JavaScript 执行，或场景生成器从未观测到的执行一定正确。
+[Specula](https://github.com/specula-org/Specula) 把从代码分析、规格生成到插桩、轨迹验证、模型检查和缺陷确认组织成自动化流程。其固定 v1.1.0 revision `c6aa3dfa41cd4bc7411fae40bd040924c70d9725` 在本研究中只作为轨迹生成、验证和调试参考。[Murat Demirbas 的评论](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html)指出，由实现归纳的模型本身不能单独成为同一实现符合预期语义的独立证据。
+
+因此，本研究不采用“从 Cordis 代码推导待验证不变量”这一部分。实际借鉴的是 instrumentation mapping、确定性 NDJSON、游标消费、完整 `TraceMatched`、TLC 反馈和分层定位第一处 mismatch。Cordis 论文是性质来源，Cordis `formal/` 是可执行规格权威，Specula 不是 submodule、构建依赖或 CI 依赖。
+
+## 解释规则
+
+一项 `pass` 表示：在 lock 固定的 revision、有限模型常量、声明前提和已采集轨迹内，没有发现反例，且接受的实现轨迹 refine 到论文驱动的机器。它不推广到任意插件外部副作用、未观测执行或无界活性。

@@ -1,0 +1,58 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Stool233/cordis-formal-study/blob/main/schemas/study-report.schema.json",
+  "title": "Cordis Formal Study Aggregate Report",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "studyVersion", "status", "stages"],
+  "properties": {
+    "schema": { "const": "cordis.formal-study-report/v1" },
+    "studyVersion": { "type": "string", "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$" },
+    "status": { "const": "pass" },
+    "stages": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/stage" }
+    }
+  },
+  "$defs": {
+    "revision": { "type": "string", "pattern": "^[0-9a-f]{40}$" },
+    "reference": { "type": "string", "pattern": "^(?!/)(?!.*\\\\)(?!.*(?:^|/)\\.\\.?/).+$" },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "report"],
+      "properties": {
+        "revision": { "$ref": "#/$defs/revision" },
+        "report": { "$ref": "#/$defs/reference" },
+        "traceMismatches": { "type": "integer", "minimum": 0 },
+        "behaviorFailures": { "type": "integer", "minimum": 0 },
+        "scenarios": { "type": "integer", "minimum": 0 },
+        "mutations": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "stage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "status", "formalStatus", "repositories"],
+      "properties": {
+        "id": { "type": "string", "enum": ["baseline", "conformance", "upstream-fix"] },
+        "order": { "type": "integer", "minimum": 1 },
+        "status": {
+          "type": "string",
+          "enum": ["expected-mismatch-reproduced", "formal-and-tests-pass", "ordinary-tests-pass"]
+        },
+        "formalStatus": { "type": "string", "enum": ["expected-fail", "pass", "not-run"] },
+        "repositories": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cordis", "deepseekHarness"],
+          "properties": {
+            "cordis": { "$ref": "#/$defs/repository" },
+            "deepseekHarness": { "$ref": "#/$defs/repository" }
+          }
+        }
+      }
+    }
+  }
+}
