@@ -1,0 +1,66 @@
+name: Conformance
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/conformance.yml'
+      - '.gitmodules'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'locks/**'
+      - 'schemas/**'
+      - 'scripts/**'
+      - 'sources/cordis'
+      - 'sources/deepseek-harness'
+      - 'study.lock.json'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/conformance.yml'
+      - '.gitmodules'
+      - 'package.json'
+      - 'package-lock.json'
+      - 'locks/**'
+      - 'schemas/**'
+      - 'scripts/**'
+      - 'sources/cordis'
+      - 'sources/deepseek-harness'
+      - 'study.lock.json'
+
+permissions:
+  contents: read
+
+jobs:
+  conformance:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: corepack enable
+      - run: npm ci
+      - run: npm run bootstrap:full
+      - run: npm run reproduce:full
+      - run: npm run verify -- --full
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: conformance-evidence
+          path: .artifacts/
+          if-no-files-found: warn

@@ -1,0 +1,12 @@
+cff-version: 1.2.0
+message: "If you use this research portal or its evidence, please cite it as follows."
+title: "Cordis Formal Study: TLA+ Models and Trace Conformance Evidence"
+type: software
+version: 0.1.0
+date-released: 2026-08-16
+authors:
+  - family-names: Weng
+    given-names: Jialin
+    alias: Stool233
+repository-code: "https://github.com/Stool233/cordis-formal-study"
+license: MIT

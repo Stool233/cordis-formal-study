@@ -1,0 +1,44 @@
+name: Nightly
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '17 3 * * 1'
+
+permissions:
+  contents: read
+
+jobs:
+  nightly:
+    runs-on: ubuntu-latest
+    timeout-minutes: 150
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - run: corepack enable
+      - run: npm ci
+      - run: npm run bootstrap:full
+      - run: npm run reproduce:nightly
+      - run: npm run reproduce:full
+      - run: npm run verify -- --full
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: nightly-evidence
+          path: .artifacts/
+          if-no-files-found: warn

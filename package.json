@@ -1,0 +1,20 @@
+{
+  "name": "cordis-formal-study",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "engines": {
+    "node": ">=24"
+  },
+  "scripts": {
+    "verify": "node scripts/study.mjs verify",
+    "test": "node --test test/study.test.mjs",
+    "bootstrap:core": "node scripts/study.mjs bootstrap core",
+    "bootstrap:full": "node scripts/study.mjs bootstrap full",
+    "reproduce:core": "node scripts/study.mjs reproduce core",
+    "reproduce:full": "node scripts/study.mjs reproduce full",
+    "reproduce:nightly": "node scripts/study.mjs reproduce nightly",
+    "package": "node scripts/study.mjs package"
+  }
+}

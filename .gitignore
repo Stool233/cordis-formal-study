@@ -1,0 +1,8 @@
+node_modules/
+.artifacts/
+dist/
+*.jar
+.DS_Store
+sources/cordis/formal/.cache/
+sources/cordis/formal/output/
+sources/deepseek-harness/.artifacts/
