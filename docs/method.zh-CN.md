@@ -14,7 +14,7 @@
 
 `CordisEffects.tla`、`CordisKernel.tla`、`CordisRuntime.tla` 和 `CordisConfluence.tla` 分别检查效应恢复、论文生命周期规则、实现 refinement 与多调度终态。TLC 在 PR 和 nightly 两组有限常量下检查安全不变量、死锁、排名上界和在显式公平性下的有界活性目标。
 
-有界通过表示该配置中没有找到反例，不等于任意规模的无条件证明。nightly 扩大 fiber、binding、iteration 和注册深度；只有 BFS 完成但直径不足时才补充 simulation。
+有界通过表示该配置中没有找到反例，不等于任意规模的无条件证明。nightly 采用分层边界：扩大的 effect 模型和各个 kernel 维度运行完整 BFS，组合后的五 fiber runtime、kernel 和 confluence 边界则分别运行精确 100,000 条固定 seed 的 simulation 轨迹。报告将每项结果标记为 `exhaustive` 或 `simulation`；`Progress`、`EventuallyCanonical` 等时序性质只接受已完成的 BFS 证据。
 
 ### 2. 实现轨迹 refinement
 

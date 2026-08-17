@@ -106,7 +106,7 @@ npm run verify -- --full
 | `npm run bootstrap:full` | 再初始化可浏览的 DeepSeek Harness submodule。 |
 | `npm run reproduce:core` | 在 conformance submodule 上运行 Cordis PR formal profile。 |
 | `npm run reproduce:full` | 再运行 vendored conformance 与 AgentLoop。 |
-| `npm run reproduce:nightly` | 在阶段二 Cordis checkout 上运行扩大后的 nightly 模型。 |
+| `npm run reproduce:nightly` | 在阶段二 Cordis checkout 上运行分层完整 BFS 与固定 seed 的扩大边界 simulation。 |
 
 这些是阶段二的底层 profile，不代替三阶段的 `reproduce:study`。
 

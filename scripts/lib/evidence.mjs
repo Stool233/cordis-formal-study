@@ -43,20 +43,43 @@ export function assertHash(actual, expected, label) {
   assert.equal(actual, expected, `${label} SHA-256 does not match study.lock.json`)
 }
 
-export function validateModelReport(report, requiredProperties, expectedProfile) {
+export function validateModelReport(report, requiredProperties, expectedProfile, nightlyModel) {
   record(report, 'model report')
   assert.equal(report.schema, 'cordis.paper-model-report/v1')
   assert.equal(report.profile, expectedProfile)
   assert.ok(Array.isArray(report.results) && report.results.length > 0, 'model report has no results')
-  const observed = new Set()
+  const observedExhaustively = new Set()
+  let simulationCount = 0
   for (const result of report.results) {
     record(result, 'model result')
     assert.equal(result.status, 'pass', `${result.name} model status is not pass`)
     allPass(result.properties, `model ${result.name}`)
-    Object.keys(result.properties).forEach(property => observed.add(property))
+    assert.ok(['exhaustive', 'simulation'].includes(result.mode), `${result.name} has no recognized model mode`)
+    if (result.mode === 'simulation') {
+      assert.equal(expectedProfile, 'nightly', `${result.name} uses simulation outside the nightly profile`)
+      record(nightlyModel, 'nightly model policy')
+      simulationCount += 1
+      assert.equal(result.traces, nightlyModel.tracesPerRun, `${result.name} generated the wrong number of traces`)
+      assert.equal(result.requestedTraces, nightlyModel.tracesPerRun, `${result.name} requested the wrong number of traces`)
+      assert.ok(Number.isInteger(result.checkedStates) && result.checkedStates > 0, `${result.name} checked no simulation states`)
+      assert.equal(result.traceDepth, nightlyModel.traceDepth, `${result.name} used the wrong simulation depth`)
+      assert.equal(result.seed, nightlyModel.seed, `${result.name} used the wrong simulation seed`)
+      assert.equal(result.aril, nightlyModel.aril, `${result.name} used the wrong simulation aril`)
+      for (const property of nightlyModel.temporalPropertiesExhaustiveOnly) {
+        assert.equal(property in result.properties, false, `${result.name} claims sampled evidence for temporal property ${property}`)
+      }
+    } else {
+      Object.keys(result.properties).forEach(property => observedExhaustively.add(property))
+    }
+  }
+  if (expectedProfile === 'nightly') {
+    record(nightlyModel, 'nightly model policy')
+    assert.equal(simulationCount, nightlyModel.simulationRunCount, 'nightly simulation run count differs from study.lock.json')
+  } else {
+    assert.equal(simulationCount, 0, 'pull-request model report must be exhaustive')
   }
   const modelProperties = requiredProperties.filter(property => property !== 'ProgressBound')
-  for (const property of modelProperties) assert.ok(observed.has(property), `required model property ${property} is unobserved`)
+  for (const property of modelProperties) assert.ok(observedExhaustively.has(property), `required model property ${property} has no exhaustive evidence`)
 }
 
 export function validateConformanceReport(report, expectedScenarioNames, prerequisiteAudits) {
@@ -232,7 +255,7 @@ export async function validateEvidenceOutput(outputRoot, lock, options) {
   }
 
   if (options.modelProfile) {
-    validateModelReport(await readJson(resolve(outputRoot, 'model-report.json')), lock.evidence.requiredProperties, options.modelProfile)
+    validateModelReport(await readJson(resolve(outputRoot, 'model-report.json')), lock.evidence.requiredProperties, options.modelProfile, lock.evidence.nightlyModel)
   }
   await assertPortableEvidence(outputRoot)
   return { scenarios: conformance.scenarios.length, mutations: mutation.results.length }

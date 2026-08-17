@@ -14,7 +14,7 @@ That ordering avoids circular confirmation. If a specification is inferred entir
 
 `CordisEffects.tla`, `CordisKernel.tla`, `CordisRuntime.tla`, and `CordisConfluence.tla` check effect recovery, paper lifecycle rules, implementation refinement, and terminal equivalence across schedules. TLC checks safety invariants, deadlock, ranking bounds, and bounded liveness objectives under explicit fairness in PR and nightly finite configurations.
 
-A bounded pass means no counterexample was found in that configuration, not an unconditional proof at arbitrary scale. Nightly increases fibers, bindings, iterations, and registration depth; simulation supplements only a completed BFS whose diameter is insufficient.
+A bounded pass means no counterexample was found in that configuration, not an unconditional proof at arbitrary scale. Nightly uses layered bounds: expanded effects and individual kernel dimensions receive exhaustive BFS, while the combined five-fiber runtime, kernel, and confluence bounds receive exactly 100,000 fixed-seed simulation traces per run. Reports identify each result as `exhaustive` or `simulation`. Temporal properties such as `Progress` and `EventuallyCanonical` are accepted only from completed BFS runs.
 
 ### 2. Implementation-trace refinement
 

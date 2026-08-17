@@ -238,10 +238,44 @@ test('model reports and mutants must cover every required obligation', () => {
   const model = {
     schema: 'cordis.paper-model-report/v1',
     profile: 'pr',
-    results: [{ name: 'kernel', status: 'pass', properties: { Preservation: 'pass' } }],
+    results: [{ name: 'kernel', status: 'pass', mode: 'exhaustive', properties: { Preservation: 'pass' } }],
   }
   assert.doesNotThrow(() => validateModelReport(model, ['Preservation', 'ProgressBound'], 'pr'))
-  assert.throws(() => validateModelReport(model, ['Preservation', 'Ordering'], 'pr'), /unobserved/)
+  assert.throws(() => validateModelReport(model, ['Preservation', 'Ordering'], 'pr'), /no exhaustive evidence/)
+  const nightlyPolicy = {
+    simulationRunCount: 1,
+    tracesPerRun: 100000,
+    traceDepth: 100,
+    seed: 113,
+    aril: 0,
+    temporalPropertiesExhaustiveOnly: ['Progress'],
+  }
+  const nightly = {
+    schema: 'cordis.paper-model-report/v1',
+    profile: 'nightly',
+    results: [
+      { name: 'kernel-bfs', status: 'pass', mode: 'exhaustive', properties: { Preservation: 'pass', Progress: 'pass' } },
+      {
+        name: 'kernel-expanded',
+        status: 'pass',
+        mode: 'simulation',
+        properties: { Preservation: 'pass' },
+        traces: 100000,
+        requestedTraces: 100000,
+        checkedStates: 1000000,
+        traceDepth: 100,
+        seed: 113,
+        aril: 0,
+      },
+    ],
+  }
+  assert.doesNotThrow(() => validateModelReport(nightly, ['Preservation', 'Progress'], 'nightly', nightlyPolicy))
+  const sampledTemporal = structuredClone(nightly)
+  sampledTemporal.results[1].properties.Progress = 'pass'
+  assert.throws(() => validateModelReport(sampledTemporal, ['Preservation', 'Progress'], 'nightly', nightlyPolicy), /sampled evidence for temporal property/)
+  const missingExhaustive = structuredClone(nightly)
+  delete missingExhaustive.results[0].properties.Preservation
+  assert.throws(() => validateModelReport(missingExhaustive, ['Preservation', 'Progress'], 'nightly', nightlyPolicy), /no exhaustive evidence/)
   const mutation = {
     schema: 'cordis.paper-mutation-report/v1',
     results: [{ name: 'fifo', status: 'rejected', trace: 'mutations/fifo.ndjson', theorem: 'LifoRecovery' }],

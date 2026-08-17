@@ -4,7 +4,7 @@ English | [中文](architecture.zh-CN.md)
 
 ## Ownership and evidence flow
 
-The study has one executable-specification authority: [the `formal/` directory at the Cordis conformance revision](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal). The portal does not copy TLA+ modules. It owns version pinning, stage checkouts, orchestration, report validation, documentation, and Release packaging.
+The study has one executable-specification authority: [the `formal/` directory at the Cordis conformance revision](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal). The portal does not copy TLA+ modules. It owns version pinning, stage checkouts, orchestration, report validation, documentation, and Release packaging.
 
 ```text
 Cordis paper ──> paper-driven TLA+ machines ──> bounded TLC model reports
@@ -24,9 +24,9 @@ Properties flow from paper to specification, which then judges implementations. 
 
 The three gitlinks under `sources/` provide browsable snapshots:
 
-- `sources/cordis` pins conformance Cordis `112f71c2…`;
+- `sources/cordis` pins conformance Cordis `d06ee04a…`;
 - `sources/paper` pins upstream English paper `948a07b3…`;
-- `sources/deepseek-harness` pins conformance DeepSeek Harness `8a85249f…`.
+- `sources/deepseek-harness` pins conformance DeepSeek Harness `4b002125…`.
 
 The full study never switches branches inside submodules. `bootstrap:study` reads six SHAs from `researchStages` and `branchMatrix`, fetches them from the personal forks, and creates detached worktrees at:
 
@@ -71,7 +71,7 @@ Every JSON/NDJSON reference is a normalized POSIX path relative to `.artifacts` 
 
 `npm run verify` checks lock schemas, stage order and revision mapping, gitlinks, clean submodules and stage checkouts, paper hash, personal commit identity, Cordis/DSH pins, observation/scenario inventories, report paths, and bilingual links. If stage evidence exists, verify revalidates its semantics.
 
-The Integrity workflow runs no TLC. Conformance runs one manually selected stage or defaults to the full study on pull requests and relevant `main` pushes. Nightly runs all three stages before expanding the model on the conformance Cordis checkout. Release reruns and packages evidence from the same locked sources.
+The Integrity workflow runs no TLC. Conformance runs one manually selected stage or defaults to the full study on pull requests and relevant `main` pushes. Nightly runs all three stages before running layered exhaustive and fixed-seed sampled model bounds on the conformance Cordis checkout. Release reruns and packages evidence from the same locked sources.
 
 ## Release selection boundary
 

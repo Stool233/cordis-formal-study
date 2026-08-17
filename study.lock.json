@@ -13,7 +13,7 @@
       "source": "https://github.com/Stool233/cordis.git",
       "branch": "research/paper-conformance",
       "baseline": "8cc9e33fab69e2d0476d126baaf2acb24e6a6ab4",
-      "revision": "112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b",
+      "revision": "d06ee04a4c1c0cdd9605cd3d77521f90220d098b",
       "role": "authoritative executable specification and upstream implementation trace target",
       "license": "MIT",
       "ownedCommits": [
@@ -23,7 +23,8 @@
         "a0f8baa9b9abfee73292c525ebcd46103b175b0d",
         "23f5e7d6e4a0cf451567dad1caad7b4049df6992",
         "fe45fb4d1e89fd6c8ae24399f601a3da9356da8a",
-        "112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b"
+        "112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b",
+        "d06ee04a4c1c0cdd9605cd3d77521f90220d098b"
       ],
       "rewrittenCommits": [
         {
@@ -56,7 +57,7 @@
       "source": "https://github.com/Stool233/deepseek-harness.git",
       "branch": "research/paper-conformance",
       "baseline": "47f943859bef60e4160492346772ded9b24f765a",
-      "revision": "8a85249fc94dc94608937041674950660d787f01",
+      "revision": "4b00212558e33a0fee5dacb740621db16b1d43dc",
       "role": "vendored Cordis and offline AgentLoop conformance target",
       "license": "MIT",
       "ownedCommits": [
@@ -64,7 +65,8 @@
         "a9598b66ee117dd7e8a609c0b6c64fe87c251ad7",
         "9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f",
         "7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773",
-        "8a85249fc94dc94608937041674950660d787f01"
+        "8a85249fc94dc94608937041674950660d787f01",
+        "4b00212558e33a0fee5dacb740621db16b1d43dc"
       ],
       "rewrittenCommits": [
         {
@@ -87,7 +89,7 @@
       },
       "conformance": {
         "branch": "research/paper-conformance",
-        "revision": "112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b",
+        "revision": "d06ee04a4c1c0cdd9605cd3d77521f90220d098b",
         "traceInstrumentation": true,
         "logicFixes": true,
         "evidence": "formal-and-ordinary-tests-pass",
@@ -113,7 +115,7 @@
       },
       "conformance": {
         "branch": "research/paper-conformance",
-        "revision": "8a85249fc94dc94608937041674950660d787f01",
+        "revision": "4b00212558e33a0fee5dacb740621db16b1d43dc",
         "traceInstrumentation": true,
         "logicFixes": true,
         "evidence": "formal-and-ordinary-tests-pass",
@@ -189,12 +191,12 @@
       "expectedOutcome": "formal-and-tests-pass",
       "repositories": {
         "cordis": {
-          "revision": "112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b",
+          "revision": "d06ee04a4c1c0cdd9605cd3d77521f90220d098b",
           "traceMismatches": [],
           "behaviorFailures": []
         },
         "deepseekHarness": {
-          "revision": "8a85249fc94dc94608937041674950660d787f01",
+          "revision": "4b00212558e33a0fee5dacb740621db16b1d43dc",
           "traceMismatches": [],
           "behaviorFailures": []
         }
@@ -320,6 +322,18 @@
       "stale-committed-provider"
     ],
     "mutationCount": 4,
-    "observationPointCount": 29
+    "observationPointCount": 29,
+    "nightlyModel": {
+      "strategy": "layered-bfs-and-fixed-simulation",
+      "simulationRunCount": 4,
+      "tracesPerRun": 100000,
+      "traceDepth": 100,
+      "seed": 113,
+      "aril": 0,
+      "temporalPropertiesExhaustiveOnly": [
+        "Progress",
+        "EventuallyCanonical"
+      ]
+    }
   }
 }

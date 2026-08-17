@@ -125,7 +125,8 @@
         "prerequisiteAudits",
         "mutations",
         "mutationCount",
-        "observationPointCount"
+        "observationPointCount",
+        "nightlyModel"
       ],
       "properties": {
         "requiredProperties": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
@@ -140,7 +141,29 @@
         },
         "mutations": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
         "mutationCount": { "type": "integer", "minimum": 1 },
-        "observationPointCount": { "type": "integer", "minimum": 1 }
+        "observationPointCount": { "type": "integer", "minimum": 1 },
+        "nightlyModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy",
+            "simulationRunCount",
+            "tracesPerRun",
+            "traceDepth",
+            "seed",
+            "aril",
+            "temporalPropertiesExhaustiveOnly"
+          ],
+          "properties": {
+            "strategy": { "const": "layered-bfs-and-fixed-simulation" },
+            "simulationRunCount": { "type": "integer", "minimum": 1 },
+            "tracesPerRun": { "type": "integer", "minimum": 1 },
+            "traceDepth": { "type": "integer", "minimum": 1 },
+            "seed": { "type": "integer" },
+            "aril": { "type": "integer" },
+            "temporalPropertiesExhaustiveOnly": { "$ref": "#/$defs/nonEmptyUniqueStrings" }
+          }
+        }
       }
     }
   },

@@ -4,7 +4,7 @@
 
 > **研究状态——早期进行中。** 完整 TLA+ 规格、论文定理映射和 refinement 规则仍需人工审阅与独立复核。
 
-这是一个独立、非官方、可复现的研究门户，用于检查 Cordis 论文、上游 Cordis 实现，以及 DeepSeek Harness 中的 vendored Cordis 是否一致。论文决定待验证的性质；实现是验证对象。[Cordis 固定 revision 的 `formal/` 目录](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal)是唯一权威的可执行规格，本门户负责固定版本、编排复现和解释结果。
+这是一个独立、非官方、可复现的研究门户，用于检查 Cordis 论文、上游 Cordis 实现，以及 DeepSeek Harness 中的 vendored Cordis 是否一致。论文决定待验证的性质；实现是验证对象。[Cordis 固定 revision 的 `formal/` 目录](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal)是唯一权威的可执行规格，本门户负责固定版本、编排复现和解释结果。
 
 ## 研究背景
 
@@ -33,7 +33,7 @@ flowchart LR
 | 阶段 | Cordis | DeepSeek Harness | 一键复现 | 成功的含义 |
 | --- | --- | --- | --- | --- |
 | `baseline` | [`research/paper-trace-baseline` @ `48c4604`](https://github.com/Stool233/cordis/tree/48c4604005b80b4e4fd7706088f5b721a16ea8de) | [`research/paper-trace-baseline` @ `59c8608`](https://github.com/Stool233/deepseek-harness/tree/59c86088a75c4afe99d28244baedaa159231c46c) | `npm run reproduce:baseline` | 只在 9/10 条轨迹 mismatch 和 4/3 项行为失败与 lock 完全一致时返回 0。 |
-| `conformance` | [`research/paper-conformance` @ `112f71c`](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b) | [`research/paper-conformance` @ `8a85249`](https://github.com/Stool233/deepseek-harness/tree/8a85249fc94dc94608937041674950660d787f01) | `npm run reproduce:conformance` | 有界模型、全部轨迹、前提审计、mutations、AgentLoop 与普通回归均通过。 |
+| `conformance` | [`research/paper-conformance` @ `d06ee04`](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b) | [`research/paper-conformance` @ `4b00212`](https://github.com/Stool233/deepseek-harness/tree/4b00212558e33a0fee5dacb740621db16b1d43dc) | `npm run reproduce:conformance` | 有界模型、全部轨迹、前提审计、mutations、AgentLoop 与普通回归均通过。 |
 | `upstream-fix` | [`fix/paper-conformance` @ `3120ba9`](https://github.com/Stool233/cordis/tree/3120ba9928bd5fe37e34f50e521077121000f050) | [`fix/paper-conformance` @ `6bb3cdd`](https://github.com/Stool233/deepseek-harness/tree/6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3) | `npm run reproduce:upstream-fix` | trace/formal 研究代码已移除，普通源码门禁通过，报告记录 `formalStatus: "not-run"`。 |
 
 三个分支依次保存研究过程中的三个可复现快照：baseline 记录原实现的观测结果，conformance 记录带插桩的修复验证，upstream-fix 记录移除插桩后的逻辑补丁与回归测试。`study.lock.json` 把阶段顺序、分支角色、完整 SHA 和预期结果写成机器可检查的事实。
@@ -76,13 +76,13 @@ npm run bootstrap:study
 2. 阅读[研究过程与结果](docs/results.zh-CN.md)，了解反例、修复和证据边界。
 3. 按[复现指南](docs/reproduce.zh-CN.md)重跑某一阶段或完整研究。
 4. 再阅读[方法](docs/method.zh-CN.md)和[架构](docs/architecture.zh-CN.md)。
-5. 最后进入[权威 Cordis `formal/` 目录](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal)检查 TLA+ 模块、定理索引和 runner。
+5. 最后进入[权威 Cordis `formal/` 目录](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal)检查 TLA+ 模块、定理索引和 runner。
 
 ## 固定快照与 CI
 
-门户可浏览的 submodule 固定到 conformance revisions：[Cordis `112f71c`](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b)、[英文论文 `948a07b`](https://github.com/cordiverse/paper/tree/948a07b369c62adb3b12e102458be5c18dfb69b9)和 [DeepSeek Harness `8a85249`](https://github.com/Stool233/deepseek-harness/tree/8a85249fc94dc94608937041674950660d787f01)。[`study.lock.json`](study.lock.json) 还固定另外四个阶段 revision、论文 PDF 哈希、工具链、完整预期 mismatch 名称和证据规模。
+门户可浏览的 submodule 固定到 conformance revisions：[Cordis `d06ee04`](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b)、[英文论文 `948a07b`](https://github.com/cordiverse/paper/tree/948a07b369c62adb3b12e102458be5c18dfb69b9)和 [DeepSeek Harness `4b00212`](https://github.com/Stool233/deepseek-harness/tree/4b00212558e33a0fee5dacb740621db16b1d43dc)。[`study.lock.json`](study.lock.json) 还固定另外四个阶段 revision、论文 PDF 哈希、工具链、完整预期 mismatch 名称和证据规模。
 
-**Integrity** 在每次 push/PR 运行，不执行 TLC。**Conformance** 在相关 PR、`main` push 或手动触发时运行；手动触发可选择 `baseline`、`conformance`、`upstream-fix` 或默认的 `study`。**Nightly** 每周先复现完整三阶段，再运行扩大的阶段二模型。**Release** 只有三阶段与 nightly 全部通过后才打包证据。
+**Integrity** 在每次 push/PR 运行，不执行 TLC。**Conformance** 在相关 PR、`main` push 或手动触发时运行；手动触发可选择 `baseline`、`conformance`、`upstream-fix` 或默认的 `study`。**Nightly** 每周先复现完整三阶段，再对阶段二运行分层完整检查与固定 seed 的扩大边界 simulation。**Release** 只有三阶段与 nightly 全部通过后才打包证据。
 
 ## 结论边界
 

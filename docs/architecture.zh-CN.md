@@ -4,7 +4,7 @@
 
 ## 权威归属与证据流
 
-本研究只有一个可执行规格权威：[Cordis conformance revision 的 `formal/` 目录](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal)。门户不复制 TLA+ 模块；它负责版本固定、阶段 checkout、运行编排、报告校验、文档和 Release 打包。
+本研究只有一个可执行规格权威：[Cordis conformance revision 的 `formal/` 目录](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal)。门户不复制 TLA+ 模块；它负责版本固定、阶段 checkout、运行编排、报告校验、文档和 Release 打包。
 
 ```text
 Cordis 论文 ──> 论文驱动的 TLA+ 机器 ──> TLC 有界模型报告
@@ -24,9 +24,9 @@ conformance 实现 ─ trace ┘──> 全部接受 + mutations 被拒绝
 
 `sources/` 中的三个 gitlinks 提供可浏览快照：
 
-- `sources/cordis` 固定 conformance Cordis `112f71c2…`；
+- `sources/cordis` 固定 conformance Cordis `d06ee04a…`；
 - `sources/paper` 固定上游英文论文 `948a07b3…`；
-- `sources/deepseek-harness` 固定 conformance DeepSeek Harness `8a85249f…`。
+- `sources/deepseek-harness` 固定 conformance DeepSeek Harness `4b002125…`。
 
 完整研究不在 submodule 上切换分支。`bootstrap:study` 从 `researchStages` 与 `branchMatrix` 读取六个 SHA，通过个人 fork 取得 commit，然后在下列位置创建 detached worktree：
 
@@ -71,7 +71,7 @@ Cordis runner 顺序执行 portable-report 自测、TLA+ 语法、PR 模型、29
 
 `npm run verify` 检查 lock schema、阶段顺序与 revision 映射、gitlink、clean submodule/checkouts、论文哈希、个人提交身份、Cordis/DSH pin、观测点与场景清单、报告路径和双语链接。若任何阶段证据已经存在，verify 也会重新验证其语义。
 
-Integrity workflow 不执行 TLC。Conformance 根据手动选择执行单阶段，或在 PR/`main` push 默认执行完整研究。Nightly 先执行三阶段，再在 conformance Cordis checkout 上扩大模型。Release 在同一固定源码上重跑并打包。
+Integrity workflow 不执行 TLC。Conformance 根据手动选择执行单阶段，或在 PR/`main` push 默认执行完整研究。Nightly 先执行三阶段，再在 conformance Cordis checkout 上运行分层完整 BFS 与固定 seed 的扩大边界抽样。Release 在同一固定源码上重跑并打包。
 
 ## Release 选择边界
 

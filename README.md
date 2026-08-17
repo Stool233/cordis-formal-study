@@ -4,7 +4,7 @@ English | [中文](README.zh-CN.md)
 
 > **Research status — early-stage work in progress.** The complete TLA+ specification, paper-to-theorem mapping, and refinement rules still require human audit and independent review.
 
-This independent, unofficial, reproducible study examines alignment among the Cordis paper, upstream Cordis, and the vendored Cordis in DeepSeek Harness. The paper determines the properties under validation; the implementations are validation subjects. [The locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal) is the sole executable-specification authority. This portal pins revisions, orchestrates reproduction, and explains the results.
+This independent, unofficial, reproducible study examines alignment among the Cordis paper, upstream Cordis, and the vendored Cordis in DeepSeek Harness. The paper determines the properties under validation; the implementations are validation subjects. [The locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal) is the sole executable-specification authority. This portal pins revisions, orchestrates reproduction, and explains the results.
 
 ## Research background
 
@@ -33,7 +33,7 @@ flowchart LR
 | Stage | Cordis | DeepSeek Harness | One-command reproduction | What success means |
 | --- | --- | --- | --- | --- |
 | `baseline` | [`research/paper-trace-baseline` @ `48c4604`](https://github.com/Stool233/cordis/tree/48c4604005b80b4e4fd7706088f5b721a16ea8de) | [`research/paper-trace-baseline` @ `59c8608`](https://github.com/Stool233/deepseek-harness/tree/59c86088a75c4afe99d28244baedaa159231c46c) | `npm run reproduce:baseline` | Exits zero only when the exact locked 9/10 trace mismatches and 4/3 behavior failures are reproduced. |
-| `conformance` | [`research/paper-conformance` @ `112f71c`](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b) | [`research/paper-conformance` @ `8a85249`](https://github.com/Stool233/deepseek-harness/tree/8a85249fc94dc94608937041674950660d787f01) | `npm run reproduce:conformance` | Bounded models, all traces, premise audits, mutations, AgentLoop, and ordinary regressions pass. |
+| `conformance` | [`research/paper-conformance` @ `d06ee04`](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b) | [`research/paper-conformance` @ `4b00212`](https://github.com/Stool233/deepseek-harness/tree/4b00212558e33a0fee5dacb740621db16b1d43dc) | `npm run reproduce:conformance` | Bounded models, all traces, premise audits, mutations, AgentLoop, and ordinary regressions pass. |
 | `upstream-fix` | [`fix/paper-conformance` @ `3120ba9`](https://github.com/Stool233/cordis/tree/3120ba9928bd5fe37e34f50e521077121000f050) | [`fix/paper-conformance` @ `6bb3cdd`](https://github.com/Stool233/deepseek-harness/tree/6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3) | `npm run reproduce:upstream-fix` | Trace/formal research code is absent, ordinary source gates pass, and the report records `formalStatus: "not-run"`. |
 
 The three branches preserve successive reproducible snapshots of the research process: baseline records observations from the original implementation, conformance records instrumented validation of the corrections, and upstream-fix records the trace-free logic patch and regression tests. `study.lock.json` makes the stage order, branch roles, complete SHAs, and expected outcomes machine-checkable.
@@ -76,13 +76,13 @@ Then choose a goal:
 2. Read [Research process and results](docs/results.md) for counterexamples, corrections, and evidence limits.
 3. Follow [Reproduction](docs/reproduce.md) to rerun one stage or the full study.
 4. Continue with [Method](docs/method.md) and [Architecture](docs/architecture.md).
-5. Inspect the [authoritative Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b/formal) for the TLA+ modules, theorem index, and runner.
+5. Inspect the [authoritative Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal) for the TLA+ modules, theorem index, and runner.
 
 ## Pinned snapshot and CI
 
-The browsable portal submodules pin the conformance revisions: [Cordis `112f71c`](https://github.com/Stool233/cordis/tree/112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b), [English paper `948a07b`](https://github.com/cordiverse/paper/tree/948a07b369c62adb3b12e102458be5c18dfb69b9), and [DeepSeek Harness `8a85249`](https://github.com/Stool233/deepseek-harness/tree/8a85249fc94dc94608937041674950660d787f01). [`study.lock.json`](study.lock.json) also pins the other four stage revisions, the paper PDF hash, toolchain, exact expected mismatch names, and evidence scale.
+The browsable portal submodules pin the conformance revisions: [Cordis `d06ee04`](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b), [English paper `948a07b`](https://github.com/cordiverse/paper/tree/948a07b369c62adb3b12e102458be5c18dfb69b9), and [DeepSeek Harness `4b00212`](https://github.com/Stool233/deepseek-harness/tree/4b00212558e33a0fee5dacb740621db16b1d43dc). [`study.lock.json`](study.lock.json) also pins the other four stage revisions, the paper PDF hash, toolchain, exact expected mismatch names, and evidence scale.
 
-**Integrity** runs on every push and pull request without TLC. **Conformance** runs on relevant pull requests, relevant `main` pushes, or manual dispatch; manual runs select `baseline`, `conformance`, `upstream-fix`, or the default `study`. **Nightly** first reproduces all three stages, then runs the expanded stage-two model. **Release** packages evidence only after the three-stage and nightly checks pass.
+**Integrity** runs on every push and pull request without TLC. **Conformance** runs on relevant pull requests, relevant `main` pushes, or manual dispatch; manual runs select `baseline`, `conformance`, `upstream-fix`, or the default `study`. **Nightly** first reproduces all three stages, then runs layered exhaustive checks and fixed-seed expanded simulations for stage two. **Release** packages evidence only after the three-stage and nightly checks pass.
 
 ## Evidence boundary
 

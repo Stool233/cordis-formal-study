@@ -106,7 +106,7 @@ Existing commands remain available:
 | `npm run bootstrap:full` | Also initialize the browsable DeepSeek Harness submodule. |
 | `npm run reproduce:core` | Run the Cordis PR formal profile on the conformance submodule. |
 | `npm run reproduce:full` | Also run vendored conformance and AgentLoop. |
-| `npm run reproduce:nightly` | Run the expanded nightly model on the stage-two Cordis checkout. |
+| `npm run reproduce:nightly` | Run layered exhaustive BFS and fixed-seed expanded simulations on the stage-two Cordis checkout. |
 
 These are lower-level stage-two profiles and do not replace the three-stage `reproduce:study` command.
 
