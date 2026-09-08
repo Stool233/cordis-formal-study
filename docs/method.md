@@ -8,9 +8,9 @@ This study asks two questions: does a finite model satisfy the paper-derived pro
 
 | Term | Meaning here |
 | --- | --- |
-| Specification | The paper-derived rules that determine accepted behavior. |
+| Specification | The study's executable interpretation of paper rules, including its abstraction choices and restrictions. |
 | Model checking | TLC explores a finite state space and looks for a counterexample. |
-| Trace refinement | Recorded implementation states and steps are mapped to the abstract model. |
+| Trace refinement | Recorded projected states and steps are accepted by the trace machine; correspondence to the paper is a separate obligation. |
 | Premise audit | An explicit check of the assumptions under which a property applies. |
 | Semantic mutation | A deliberately invalid trace that the checker must reject. |
 
@@ -18,15 +18,15 @@ Read [Results](results.md) for a concrete resource-ordering example. This page e
 
 ## Source of properties
 
-This study reads the Cordis paper before observing code. Definitions, lemmas, and theorems in the paper determine abstract state, permitted transitions, and properties under validation. `THEOREMS.md` connects paper pages, TLA+ operators, implementation observation points, and applicability premises. Code supplies implementation states and traces to interpret; it does not choose the properties used to judge itself.
+The Cordis paper supplies intended semantics; the study chooses finite abstractions and an executable interpretation. The locked kit's `THEOREMS.md` connects historical paper pages, TLA+ operators, observation points, and premises. The [arXiv review](arxiv-review.md) audits that interpretation and identifies restrictions and overstatements. Code supplies implementation states and traces; a passing checker does not itself establish that the interpretation faithfully represents the paper.
 
 That ordering avoids circular confirmation. If a specification is inferred entirely from the same implementation and then used to prove that implementation conforms, the conclusion lacks an independent source of intended semantics. After a mismatch, the study distinguishes errors in the paper model, refinement mapping, and implementation. The specification changes only when supported by the paper; a confirmed implementation deviation keeps its minimal counterexample and is corrected in code.
 
 ## Three evidence layers
 
-### 1. Bounded model checking of paper machines
+### 1. Bounded model checking of study machines
 
-`CordisEffects.tla`, `CordisKernel.tla`, `CordisRuntime.tla`, and `CordisConfluence.tla` check effect recovery, paper lifecycle rules, implementation refinement, and terminal equivalence across schedules. TLC checks safety invariants, deadlock, ranking bounds, and bounded liveness objectives under explicit fairness in PR and nightly finite configurations.
+`CordisEffects.tla`, `CordisKernel.tla`, `CordisRuntime.tla`, and `CordisConfluence.tla` check resource recovery, restricted lifecycle rules, local runtime projection invariants, and equality after shutdown across schedules. TLC checks safety invariants, deadlock, ranking bounds, and bounded liveness objectives under explicit fairness in PR and nightly finite configurations. `RuntimeRefinesPaper` does not encode a temporal simulation theorem; the confluence product's terminal condition requires every component to be Inactive.
 
 A bounded pass means no counterexample was found in that configuration, not an unconditional proof at arbitrary scale. Nightly uses layered bounds: expanded effects and individual kernel dimensions receive exhaustive BFS, while the combined five-fiber runtime, kernel, and confluence bounds receive exactly 100,000 fixed-seed simulation traces per run. Reports identify each result as `exhaustive` or `simulation`. Temporal properties such as `Progress` and `EventuallyCanonical` are accepted only from completed BFS runs.
 
@@ -34,11 +34,15 @@ A bounded pass means no counterexample was found in that configuration, not an u
 
 A test-only trace sink synchronously records lifecycle, target, committed view, fiber creation/retirement/removal, effect-iteration landing, inverses, and service provision/withdrawal within a root context. The recorder uses stable logical IDs and sequence numbers without timestamps. Each `cordis.paper-trace/v1` NDJSON record carries a complete abstract post-state.
 
-`CordisTrace.tla` cursor-consumes each record. An asynchronous iterator launch may be strictly constrained stuttering; landing maps to a paper transition. Several implementation microsteps may also map to one paper step, but silent interpretations are constrained by observations and finite auxiliary state. `TraceMatched` passes only after all records and complete post-states match; it cannot degrade to `TRUE`.
+`CordisTrace.tla` cursor-consumes each record using its own event predicates. Asynchronous launches, landings, and publication writes receive constrained interpretations using observations and finite auxiliary state. `TraceMatched` passes only after all records and complete projected post-states match; it cannot degrade to `TRUE`. The module does not instantiate the kernel transition relation, so this acceptance alone is not a checked simulation of the paper's rules.
+
+Provider IDs and resource IDs preserve useful observations, but the trace omits coeffect values, operation outcomes, inverse functions, and continuations. The paper's observational equivalence requires those operations to respect the chosen relation. Also, the trace's unconditional Active/target equality is stronger than the paper; see the [legal intermediate state](arxiv-review.md#why-active-can-temporarily-differ-from-target).
 
 ### 3. Premise audit
 
 `AcyclicDependencies`, `FiniteNames`, `BoundedIterator`, `PairwiseIndependent`, `TotalProvision`, and `NoFailure` are explicit premises. Finite traces cannot establish all of them automatically, so cyclic dependency, non-independent effect, and non-total provision use dedicated negative scenarios. A false premise must produce `not-applicable` for dependent claims and cannot count as a pass.
+
+The arXiv argument additionally requires context-mediated operations, inverse and commutativity witnesses, and stability under observational equivalence. The six flags do not encode all those obligations. `PairwiseIndependent` and `NoFailure` remain in place; the [premise audit](arxiv-review.md#what-changed-in-the-premises) explains their current meaning. The trace's `ProgressBound` is an event budget, not a check of Theorem 73's `(K + 3)(V(n) + 1)` bound.
 
 ## Observation completeness and sensitivity
 
@@ -67,4 +71,4 @@ The study therefore does not adopt the step of deriving Cordis invariants from C
 
 ## Interpretation rule
 
-A `pass` means that no counterexample was found for the locked revision, finite model constants, declared premises, and captured traces, and that accepted implementation traces refine the paper-driven machine. It does not generalize to arbitrary plugin side effects, unobserved executions, or unbounded liveness.
+A `pass` means that no counterexample was found for the locked revision, finite model constants, declared premises, and captured traces, and that the trace machine accepted the recorded projection. A separate simulation and witness argument is required to transfer that result to the paper. It does not generalize to arbitrary plugin side effects, unobserved executions, or unbounded liveness. The [arXiv review](arxiv-review.md) records completed conclusion alignment and the remaining model obligations.

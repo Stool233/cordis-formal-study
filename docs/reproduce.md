@@ -46,6 +46,8 @@ The command rejects dirty or wrong-revision inputs. It installs locked dependenc
 
 Success requires all four original behavior assertions in each trace-free implementation, the PR models, 29 Cordis observation points, 13 Cordis traces, 17 Harness traces, and rejection of four mutations for each implementation. Original behavior assertions remain intact; their expected failure set becomes empty for the fixed candidates.
 
+These are checks against the historical specification. The [arXiv review](arxiv-review.md) explains how to interpret their property names and the remaining model obligations; rerunning this command does not validate the entire newer calculus.
+
 The final line prints `.artifacts/alignment/run-<id>/evidence/report.json`. It records the paper, tool, source revisions, source trees, and patch hashes. An interrupted or failed run has no passing aggregate report. Worktrees and dependencies sit outside the evidence directory.
 
 Repository tests, builds, lint, and documentation checks are separate from this formal command. Their commands are in the [Cordis fork guide](https://github.com/Stool233/cordis/blob/main/docs/formal-study.md) and [Harness fork guide](https://github.com/Stool233/deepseek-harness/blob/master/docs/cordis-study.md); measured results belong to [Upstream alignment](upstream-alignment.md).

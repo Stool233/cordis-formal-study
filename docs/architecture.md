@@ -18,7 +18,7 @@ The study has one executable-specification authority: [the `formal/` directory a
 ```text
 Cordis paper ──> paper-driven TLA+ machines ──> bounded TLC model reports
                            ▲
-                           │ complete post-state refinement
+                           │ complete projected-state checks
                            │
 baseline implementation ─ trace ──> locked counterexample set
 conformance implementation trace ──> all accepted + mutations rejected
@@ -28,6 +28,8 @@ explicit paper premises ────────────> pass or exact not-
 ```
 
 Properties flow from paper to specification, which then judges implementations. DeepSeek Harness contributes only the vendored implementation, extra scenarios, and a runner consuming the Cordis kit. Specula contributes only trace-instrumentation, validation, and debugging references.
+
+The arrows describe intended provenance, not a proved simulation chain. The [arXiv audit](arxiv-review.md) identifies restrictions in the models and the separate trace machine; accepted projected states alone do not establish equivalence to the paper calculus.
 
 ## Source and stage topology
 
@@ -79,7 +81,7 @@ The portal first uses tracked-file inventory and package scripts to require the 
 
 [reproduce-alignment.mjs](../scripts/reproduce-alignment.mjs) checks clean fork inputs against the alignment lock, installs dependencies, and creates separate worktrees under `.artifacts/alignment/run-<id>/`. Each observation patch is hashed before application and checked again after execution.
 
-The runner extracts the historical Cordis kit from its pinned Git tree. It changes the TLC hash only in that copy's runner and provenance. Models, premises, and refinement rules keep their historical source; the [new paper review](upstream-alignment.md) is a separate obligation.
+The runner extracts the historical Cordis kit from its pinned Git tree. It changes the TLC hash only in that copy's runner and provenance. Models, premises, and refinement rules keep their historical source. The separate [arXiv review](arxiv-review.md) has aligned conclusions and premises; migration to an executable arXiv specification remains outstanding.
 
 The `evidence/` directory contains original behavior assertions, bounded models, trace and mutation reports, provenance, and `cordis.formal-study-alignment-report/v1`. Its aggregate identifies source trees and patch hashes. Ordinary repository checks are recorded separately in the alignment report. Current migration outputs are not inputs to the historical release packager.
 

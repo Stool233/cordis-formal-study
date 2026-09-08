@@ -6,6 +6,31 @@
   "originalStudyReproduction": "blocked-tlc-download-sha256",
   "historicalUpstreamFixStage": "ordinary-tests-pass",
   "latestPaperFormalStatus": "not-validated",
+  "latestPaperReview": {
+    "reviewedOn": "2026-09-09",
+    "version": "arXiv:2608.25512v1",
+    "sha256": "390775dbc9debdcf2ed1b076eed013387ca057630be3cb594617b2b742e48cf0",
+    "status": "conclusions-reviewed-with-qualifications",
+    "scope": "source-and-claim-audit",
+    "documents": [
+      "docs/arxiv-review.md",
+      "docs/arxiv-review.zh-CN.md"
+    ],
+    "retainedConclusions": [
+      "committed-consumer-cleanup-before-provider-recovery",
+      "retirement-visibility-until-cleanup",
+      "provider-identity-resolution"
+    ],
+    "qualifiedConclusions": [
+      "active-target-equality-is-a-stronger-study-projection",
+      "resource-id-recovery-does-not-prove-coeffect-observational-equivalence",
+      "bounded-shutdown-product-and-two-assembly-samples-do-not-establish-full-confluence",
+      "scenario-event-budget-is-not-the-paper-progress-bound",
+      "trace-acceptance-is-not-a-proved-simulation-of-the-paper"
+    ],
+    "modelMigration": "not-performed",
+    "historicalEvidence": "unchanged"
+  },
   "implementations": {
     "cordis": {
       "upstream": "https://github.com/cordiverse/cordis.git",

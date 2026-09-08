@@ -18,7 +18,7 @@
 ```text
 Cordis 论文 ──> 论文驱动的 TLA+ 机器 ──> TLC 有界模型报告
                          ▲
-                         │ 完整后状态 refinement
+                         │ 完整投影后状态检查
                          │
 baseline 实现 ── trace ──┤──> 锁定的反例集合
 conformance 实现 ─ trace ┘──> 全部接受 + mutations 被拒绝
@@ -28,6 +28,8 @@ conformance 实现 ─ trace ┘──> 全部接受 + mutations 被拒绝
 ```
 
 性质从论文流向规格，再由规格判断实现。DeepSeek Harness 只提供 vendored 实现、附加场景和消费 Cordis kit 的 runner；Specula 只提供轨迹插桩/验证/调试参考。
+
+图中的箭头描述预期来源，不是一条已证明的 simulation 链。[arXiv 审计](arxiv-review.zh-CN.md)指出模型限制与独立轨迹机器的边界；投影状态被接受本身不能建立与论文演算的等价关系。
 
 ## 源码与阶段拓扑
 
@@ -79,7 +81,7 @@ Cordis runner 顺序执行 portable-report 自测、TLA+ 语法、PR 模型、29
 
 [reproduce-alignment.mjs](../scripts/reproduce-alignment.mjs) 根据 alignment lock 检查干净的 fork 输入，安装依赖，并在 `.artifacts/alignment/run-<id>/` 中创建独立 worktree。每份观测补丁在应用前核对哈希，在执行后再次核对。
 
-Runner 从固定的 Git tree 提取历史 Cordis kit，只在该副本的 runner 与 provenance 中修改 TLC 哈希。模型、前提和 refinement 规则保留历史来源；[新版论文审阅](upstream-alignment.zh-CN.md)是一项独立工作。
+Runner 从固定的 Git tree 提取历史 Cordis kit，只在该副本的 runner 与 provenance 中修改 TLC 哈希。模型、前提和 refinement 规则保留历史来源。独立的 [arXiv 审阅](arxiv-review.zh-CN.md)已完成结论与前提对齐；迁移为 arXiv 可执行规格仍待完成。
 
 `evidence/` 目录包含原始行为断言、有界模型、轨迹与 mutation 报告、provenance，以及 `cordis.formal-study-alignment-report/v1`。聚合报告标识源码 tree 与补丁哈希。普通仓库检查单独记入对齐报告；本次迁移输出不会进入历史 Release 打包器。
 

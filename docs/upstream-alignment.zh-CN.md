@@ -19,7 +19,7 @@
 
 [alignment.lock.json](../alignment.lock.json)标识全部源码与观测补丁。[生成的聚合报告](alignment-report.json)记录实际检查，[完整快照](upstream-alignment.json)还保留上游对比。运行本次迁移，请看[复现指南](reproduce.zh-CN.md#本次迁移)。
 
-这些结果使用历史论文导出的模型，并显式记录较新的 TLC 资产。它们不是原始工具 lock 的成功重放，也没有验证新版 arXiv 论文的全部定理。
+这些结果使用历史论文导出的模型，并显式记录较新的 TLC 资产，不是原始工具 lock 的成功重放。独立的 [arXiv v1 审阅](arxiv-review.zh-CN.md)已完成结论与前提对齐：保留 cleanup 修复，收窄发布、恢复与合流主张。完整 arXiv 演算的形式化验证仍为 `not-validated`。
 
 仓库中的聚合 JSON 是摘要副本，其中的相对报告路径指向复现生成的 `evidence/` 目录。[本次迁移的 CI](../.github/workflows/upstream-alignment.yml)独立于历史 workflow 发布这些证据。
 
@@ -85,16 +85,18 @@ TLA+ 官方 [`v1.8.0` release 元数据](https://api.github.com/repos/tlaplus/tl
 | Theorem 7：recovery invariance | Theorem 7，11 页 |
 | Theorem 16：reverse recovery | Theorem 16，15 页 |
 | Theorem 20 / Corollary 21：independent withdrawal / permutation | Theorem 43 及其证明，28 页 |
-| Lemma 54：locality | Lemma 59，40 页 |
+| Lemma 54：locality | Lemma 59，40–41 页 |
 | Lemma 55 / 56 / 57：observational invariance、equivariance、vestigial entries | Lemma 60 / 61 / 62，41 / 42 / 42 页 |
 | Theorem 59：preservation | Theorem 64，43 页 |
-| Theorem 61 / Corollary 62：recovery exactness / terminal recovery | Theorem 68 / Corollary 69，46 页 |
-| Theorem 63：ordering | Theorem 70，47 页 |
+| Theorem 61 / Corollary 62：recovery exactness / terminal recovery | Theorem 68 / Corollary 69，46–47 页 |
+| Theorem 63：ordering | Theorem 70，47–48 页 |
 | Theorem 64：resolution coherence | Theorem 71，48 页 |
-| Theorem 66：progress | Theorem 73，49 页 |
-| Theorem 73：confluence | Theorem 80，54 页 |
+| Theorem 66：progress | Theorem 73，49–50 页 |
+| Theorem 73：confluence | Theorem 80，54–55 页 |
 
-新版本通过 context discipline 推导 pairwise independence，并加入 entangled steps 论证；recovery 比较改用表观测等价。Failure 被移到 §4.4 扩展中，明确规定 error outcome 阻止重新进入，且失败仍不属于 confluence 保证。这些变化需要逐项审阅 `PREMISES.md`、refinement 与模型，而不能只替换编号或删除 `NoFailure` 前提。
+[已完成的审阅](arxiv-review.zh-CN.md)记录了命题与前提差异。独立性依赖 context discipline 与每个 key 的见证，并单独处理 entangled steps；recovery 比较可观察的表。新进展界为 `(K + 3)(V(n) + 1)`。Failure 移到 §4.4，仍不属于合流范围；研究保留 `PairwiseIndependent` 与 `NoFailure`。
+
+两处既有过度表述也已修正：论文允许 L-Leave 前存在 Active/target mismatch；现有合流乘积模型只比较关闭状态，实现装配样本覆盖两个插入顺序，均不等于完整定理。历史 mismatch 数量和当前通过报告仍是锁定检查器的精确结果，其中的性质名称不是一般 arXiv 定理的证书。
 
 ## 复跑行为核对
 

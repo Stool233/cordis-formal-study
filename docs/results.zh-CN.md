@@ -14,6 +14,8 @@
 
 本文描述 [study.lock.json](../study.lock.json) 中的历史实验。论文版本为 `948a07b`，PDF SHA-256 为 `4d48478d…a49db97f`。实现版本见[架构](architecture.zh-CN.md#源码与阶段拓扑)，当前代码的结果见[上游对齐](upstream-alignment.zh-CN.md)。
 
+[2026-09-09 arXiv 审阅](arxiv-review.zh-CN.md)修正了下文的解释，没有修改这些实验结果。轨迹被拒绝表示它与锁定检查器不一致，不自动等于某条论文定理的反例。
+
 ## 这些失败意味着什么
 
 资源顺序可以直观理解：consumer 先用完资源，再由 provider 释放资源。第一项发现检查的，就是异步清理是否遵守这个顺序。
@@ -25,15 +27,17 @@ flowchart LR
 
 ### 1. Provider recovery 与 retirement ordering
 
-原实现可以在异步 consumer teardown 完成前启动 provider accumulator 的 inverse。与此同时，正在退休的 consumer 可能过早离开 runtime list，使并发 teardown 无法继续被 provider 发现。这违反论文所要求的恢复精确性、provider/consumer episode 嵌套顺序，以及 retirement 可见性约束。
+原实现可以在异步 consumer teardown 完成前启动 provider accumulator 的 inverse。与此同时，正在退休的 consumer 可能过早离开 runtime list，使并发 teardown 无法继续被 provider 发现。这些具体失败违反有 guard 的 provider/consumer 顺序，也破坏实现对 retirement 可见性的保障。新版 Theorem 70 保留 unload guard 与 episode 嵌套要求；这些测试并未建立更一般的恢复等价结论。
 
 修复保留 retiring consumer，直到其生命周期达到 quiescence；provider 在恢复自己的 accumulator 前等待已通知 dependents 退出。`provider-consumer-reverse-exit`、异步与并发 teardown、依赖丢失/恢复和 AgentLoop 装配从同一底层顺序问题的不同路径确认修复。
 
 ### 2. Lifecycle、target 与 committed view 的发布顺序
 
-原实现可能先暴露 target 或 committed provider 的变化，之后才完成与之兼容的 lifecycle 转换。相同服务值还可能掩盖 provider identity 已经替换，允许 stale committed binding 在观察状态中短暂存在。这与 Preservation、Resolution coherence，以及 committed lifecycle 的状态不变量冲突。
+原实现可能先暴露 target 或 committed provider 的变化，之后才进入本研究投影要求的 lifecycle 状态。相同服务值还可能掩盖 provider identity 已经替换。Provider 身份有直接论文依据，但仅凭发布 mismatch，不能认定违反 Preservation 或 Resolution coherence：论文允许 Active fiber 的 target 先改变，随后才执行 L-Leave。
 
 修复把 lifecycle 转换作为发布屏障：先进入兼容状态，再更新 target 或 committed view；绑定稳定性按 provider identity 而不是仅按值比较。provider replacement、iteration 中依赖丢失、unloading 中依赖恢复、realm 隔离与 confluence 轨迹共同覆盖该行为。
+
+这验证的是一种更严格的发布策略。[合法中间状态示例](arxiv-review.zh-CN.md#为什么-active-可以暂时不同于-target)说明了为何不能把 `Active ⇒ committed == target` 归给 arXiv Theorem 71 或旧 Theorem 64。历史 mismatch 的样本和数量保留，分类按此收窄。
 
 ### 3. 传递激活调度回归
 
@@ -93,7 +97,7 @@ PR profile 的固定探索结果为：
 | Runtime refinement | pass | 66 | 11 |
 | Confluence product | pass | 364,816 | 41 |
 
-模型覆盖效应局部性与 LIFO 恢复、Preservation、Recovery exactness、Ordering、Resolution coherence、Progress、runtime refinement 和 canonical terminal equality。有限实现轨迹另外检查 quiescence 与 `ProgressBound`；它们不被描述为无限时域活性证明。
+模型检查资源局部性与 LIFO 恢复、Preservation、Recovery exactness、Ordering、Resolution coherence、Progress、runtime 投影和 canonical terminal equality 等研究 operator。这些名称不表示它们等价于一般论文定理。尤其是乘积模型比较关闭状态，`RuntimeRefinesPaper` 是局部不变量合取，而非时序模拟定理。[模型审计](arxiv-review.zh-CN.md#现有模型实际覆盖什么)记录具体限制。有限轨迹另检查 quiescence 与场景 `ProgressBound`，并未验证论文的闭式步骤上界或无限时域活性。
 
 ### 实现证据
 
@@ -129,6 +133,6 @@ PR profile 的固定探索结果为：
 
 ## 结论边界
 
-结果只说明固定 revisions 在有限模型、显式前提和已采集轨迹上满足已检查性质。它不覆盖任意 opaque 文件、网络、进程或设备副作用，不证明任意 effect 都独立或 inverse 都精确，也不把有限 quiescent 轨迹当作无界活性证明。完整规格、定理映射和 refinement 规则仍需要人工审阅与独立复核。
+结果只说明固定 revisions 在有限模型、显式前提和已采集轨迹上满足已检查性质。它不覆盖任意 opaque 文件、网络、进程或设备副作用，不证明任意 effect 都独立或 inverse 都精确，也不把有限 quiescent 轨迹当作无界活性证明。[arXiv 原文审阅](arxiv-review.zh-CN.md)已完成上述结论对齐，并列明剩余 witness、simulation 与模型迁移义务。规格及相关论证仍值得独立复核。
 
 下一步可按[复现指南](reproduce.zh-CN.md)运行三个阶段；更底层的性质来源和状态投影见[方法](method.zh-CN.md)与[架构](architecture.zh-CN.md)。

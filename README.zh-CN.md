@@ -8,7 +8,7 @@ Cordis 插件的生命周期行为，是否与论文描述一致？本研究把�
 
 ## 我们发现了什么
 
-原实现有两类相关的顺序问题：consumer 尚未完成清理时，provider 可能已回收资源；依赖变化也可能先于兼容的生命周期状态被观察到。普通测试还发现了一项传递激活调度问题。
+原实现可能在 consumer 尚未完成清理时回收 provider 资源。轨迹还暴露了被本研究较严格投影拒绝的发布状态，普通测试则发现传递激活调度问题。[arXiv 审阅](docs/arxiv-review.zh-CN.md)区分了有论文依据的顺序缺陷与投影 mismatch。
 
 | 历史实验 | Cordis | Harness 中的 vendored Cordis |
 | --- | ---: | ---: |
@@ -17,13 +17,13 @@ Cordis 插件的生命周期行为，是否与论文描述一致？本研究把�
 | 修复后被接受的轨迹 | 13 条全部 | 17 条全部 |
 | 被拒绝的语义 mutation | 4 个全部 | 4 个全部 |
 
-这里统计的是场景，不是独立缺陷数量。[研究结果](docs/results.zh-CN.md)解释反例、修复与证据。历史数字均对应 [study.lock.json](study.lock.json) 中的固定版本。
+这里统计的是场景，不是独立缺陷或论文定理反例的数量。[研究结果](docs/results.zh-CN.md)解释 mismatch、修复与证据。历史数字均对应 [study.lock.json](study.lock.json) 中的固定版本。
 
 ## 当前代码与历史证据
 
 2026-09-09 的检查取得官方 Cordis `f8ea3cd` 与 Harness `5dda764`。两个 fork 各自建立了基于这些版本的迁移分支，修复与验证记录见[上游对齐](docs/upstream-alignment.zh-CN.md)。
 
-原始三阶段快照保持不变。官方 TLC 1.8.0 下载内容的哈希已不同于历史 lock，因此全新运行原始形式化流程会在哈希校验处停止。本次迁移显式记录较新的工具，但仍使用历史论文导出的规格；新版 arXiv 论文需要另行审阅定理与前提。
+原始三阶段快照保持不变。官方 TLC 1.8.0 下载内容的哈希已不同于历史 lock，因此全新运行原始形式化流程会在哈希校验处停止。本次迁移显式记录较新的工具，仍使用历史规格。[arXiv v1 审阅](docs/arxiv-review.zh-CN.md)已完成结论与前提对齐：保留 cleanup 修复，收窄发布、恢复与合流主张；完整 arXiv 形式化验证仍标记为 `not-validated`。
 
 ## 三个阶段，三种成功含义
 
@@ -48,6 +48,7 @@ Cordis 插件的生命周期行为，是否与论文描述一致？本研究把�
 | 你想做什么 | 打开 |
 | --- | --- |
 | 理解具体失败及修复 | [研究结果](docs/results.zh-CN.md) |
+| 查看新版论文支持哪些研究结论 | [arXiv 审阅](docs/arxiv-review.zh-CN.md) |
 | 查看当前上游与迁移后的修复 | [上游对齐](docs/upstream-alignment.zh-CN.md) |
 | 自己运行检查 | [复现指南](docs/reproduce.zh-CN.md) |
 | 理解模型、轨迹与适用前提 | [方法](docs/method.zh-CN.md) |

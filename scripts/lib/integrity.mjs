@@ -31,6 +31,7 @@ import {
 const documentationPairs = [
   ['README.md', 'README.zh-CN.md'],
   ['docs/architecture.md', 'docs/architecture.zh-CN.md'],
+  ['docs/arxiv-review.md', 'docs/arxiv-review.zh-CN.md'],
   ['docs/method.md', 'docs/method.zh-CN.md'],
   ['docs/reproduce.md', 'docs/reproduce.zh-CN.md'],
   ['docs/results.md', 'docs/results.zh-CN.md'],

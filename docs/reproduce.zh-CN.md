@@ -46,6 +46,8 @@ npm run reproduce:alignment -- --cordis ../cordis --deepseek-harness ../deepseek
 
 成功要求两份无插桩实现的原始四项行为断言全部通过，PR 模型、29 个 Cordis 观测点、13 条 Cordis 轨迹与 17 条 Harness 轨迹通过，且每份实现的四个 mutation 均被拒绝。原始行为断言保持原样；修复候选的预期失败集合改为空。
 
+这些检查针对历史规格。[arXiv 审阅](arxiv-review.zh-CN.md)解释性质名称的含义及剩余模型义务；重跑此命令不等于验证新版完整演算。
+
 最后一行输出 `.artifacts/alignment/run-<id>/evidence/report.json`。报告记录论文、工具、源码版本、源码 tree 与补丁哈希。中断或失败的运行不会产生通过的聚合报告。Worktree 与依赖位于 evidence 目录之外。
 
 仓库测试、build、lint 和文档检查独立于这个形式化命令。命令见 [Cordis fork 指南](https://github.com/Stool233/cordis/blob/main/docs/formal-study.zh-CN.md)和 [Harness fork 指南](https://github.com/Stool233/deepseek-harness/blob/master/docs/cordis-study.zh.md)，实际结果见[上游对齐](upstream-alignment.zh-CN.md)。

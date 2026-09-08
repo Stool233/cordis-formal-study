@@ -8,7 +8,7 @@ Start with the findings below. To work with current code, use the [upstream alig
 
 ## What we found
 
-The original implementations expose two related ordering problems: a provider can recover resources while a consumer is still cleaning up, and dependency changes can become visible before a compatible lifecycle state. Ordinary tests also identify a transitive activation scheduling issue.
+The original implementations can recover provider resources while consumers are still cleaning up. Traces also expose publication states rejected by our stricter projection, and ordinary tests identify a transitive activation scheduling issue. The [arXiv review](docs/arxiv-review.md) distinguishes paper-supported ordering defects from projection mismatches.
 
 | Historical experiment | Cordis | Harness's vendored Cordis |
 | --- | ---: | ---: |
@@ -17,13 +17,13 @@ The original implementations expose two related ordering problems: a provider ca
 | Accepted traces after the fixes | 13 of 13 | 17 of 17 |
 | Semantic mutations rejected | 4 of 4 | 4 of 4 |
 
-These are scenario counts, not independent bug counts. [Results](docs/results.md) explains the counterexamples, fixes, and evidence. All historical numbers refer to the revisions in [study.lock.json](study.lock.json).
+These are scenario counts, not independent bug counts or counts of paper-theorem counterexamples. [Results](docs/results.md) explains the mismatches, fixes, and evidence. All historical numbers refer to the revisions in [study.lock.json](study.lock.json).
 
 ## Current code and historical evidence
 
 The 2026-09-09 check uses official Cordis `f8ea3cd` and Harness `5dda764`. The two forks have separate migration branches based on those revisions. Their fixes and verification are recorded in [Upstream alignment](docs/upstream-alignment.md).
 
-The original three-stage snapshots remain unchanged. The official TLC 1.8.0 download has a different hash from the historical lock, so a fresh original formal run stops at hash verification. The current migration records the newer tool explicitly. It still uses the historical paper-derived specification; the newer arXiv paper requires a separate theorem and premise review.
+The original three-stage snapshots remain unchanged. The official TLC 1.8.0 download has a different hash from the historical lock, so a fresh original formal run stops at hash verification. The current migration records the newer tool explicitly and still uses the historical specification. The [arXiv v1 review](docs/arxiv-review.md) is complete at the level of conclusions and premises: retain the cleanup fixes, narrow publication/recovery/confluence claims, and keep full arXiv formal validation marked `not-validated`.
 
 ## Three stages, three different meanings of success
 
@@ -48,6 +48,7 @@ The [Cordis paper](https://github.com/cordiverse/paper) supplies the properties.
 | If you want to… | Open |
 | --- | --- |
 | Understand a concrete failure and its correction | [Results](docs/results.md) |
+| See which conclusions the newer paper supports | [arXiv review](docs/arxiv-review.md) |
 | Check current upstream and the migrated fixes | [Upstream alignment](docs/upstream-alignment.md) |
 | Run the checks yourself | [Reproduction](docs/reproduce.md) |
 | Understand models, traces, and applicability | [Method](docs/method.md) |

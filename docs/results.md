@@ -14,6 +14,8 @@ This document follows the three stages of the study to explain what was found, h
 
 This page describes the historical experiment in [study.lock.json](../study.lock.json). The paper revision is `948a07b`, with PDF SHA-256 `4d48478d…a49db97f`. See [Architecture](architecture.md#source-and-stage-topology) for implementation revisions, or [Upstream alignment](upstream-alignment.md) for current-code results.
 
+The [2026-09-09 arXiv review](arxiv-review.md) corrects the interpretation below without changing those results. A rejected trace is a mismatch with the locked checker; it is not automatically a counterexample to a paper theorem.
+
 ## What the failures mean
 
 The required resource order is easy to recognize: a consumer finishes using a resource before its provider releases it. The first finding checks that order across asynchronous cleanup.
@@ -25,15 +27,17 @@ flowchart LR
 
 ### 1. Provider recovery and retirement ordering
 
-The original implementation could start a provider accumulator's inverse before asynchronous consumer teardown finished. At the same time, a retiring consumer could leave the runtime list too early, preventing concurrent teardown from continuing to discover it. This conflicts with the paper's recovery exactness, provider/consumer episode nesting, and retirement visibility requirements.
+The original implementation could start a provider accumulator's inverse before asynchronous consumer teardown finished. At the same time, a retiring consumer could leave the runtime list too early, preventing concurrent teardown from continuing to discover it. These concrete failures conflict with guarded provider/consumer ordering and the implementation's enforcement of retirement visibility. The newer paper retains the unload guard and episode nesting in Theorem 70; the tests do not establish its more general recovery-equivalence result.
 
 The correction keeps retiring consumers discoverable until lifecycle quiescence and makes provider recovery await notified dependents. Provider/consumer reverse exit, asynchronous and concurrent teardown, dependency loss and return, and AgentLoop assembly confirm the same underlying ordering issue through different paths.
 
 ### 2. Publication ordering for lifecycle, target, and committed view
 
-The original implementation could expose a target or committed-provider change before entering a compatible lifecycle state. Equal service values could also hide a provider-identity replacement, briefly exposing a stale committed binding. This conflicts with Preservation, Resolution coherence, and committed-lifecycle state invariants.
+The original implementation could expose a target or committed-provider change before entering the lifecycle state required by our projection. Equal service values could also hide a provider-identity replacement. Provider identity has a direct paper basis, but publication mismatch alone is not a demonstrated violation of Preservation or Resolution coherence: the paper allows an Active fiber's target to change before L-Leave executes.
 
 The correction uses lifecycle transition as a publication barrier: enter the compatible lifecycle state before changing target or committed view, and compare bindings by provider identity rather than value alone. Provider replacement, dependency loss during iteration, dependency return during unload, realm isolation, and confluence traces jointly cover this behavior.
+
+This validates a stricter publication strategy. The [legal intermediate-state example](arxiv-review.md#why-active-can-temporarily-differ-from-target) explains why `Active ⇒ committed == target` cannot be attributed to arXiv Theorem 71 or the old Theorem 64. Historical mismatches retain their fixtures and counts, with this narrower classification.
 
 ### 3. Transitive activation scheduling regression
 
@@ -93,7 +97,7 @@ The fixed PR-profile exploration results are:
 | Runtime refinement | pass | 66 | 11 |
 | Confluence product | pass | 364,816 | 41 |
 
-The models cover effect locality and LIFO recovery, Preservation, Recovery exactness, Ordering, Resolution coherence, Progress, runtime refinement, and canonical terminal equality. Finite implementation traces additionally check quiescence and `ProgressBound`; they are not described as infinite-horizon liveness proofs.
+The models check study operators for resource locality and LIFO recovery, Preservation, Recovery exactness, Ordering, Resolution coherence, Progress, runtime projection, and canonical terminal equality. These names do not establish equivalence to the general paper theorems. In particular, the product model compares shutdown states, and `RuntimeRefinesPaper` is a conjunction of local invariants rather than a temporal simulation theorem. The [model audit](arxiv-review.md#what-the-existing-models-actually-cover) records the restrictions. Finite traces additionally check quiescence and a scenario `ProgressBound`, not the paper's closed-form step bound or infinite-horizon liveness.
 
 ### Implementation evidence
 
@@ -129,6 +133,6 @@ The paper's static provision set cannot be equated directly with `Plugin.provide
 
 ## Evidence boundary
 
-The results say only that the locked revisions satisfy the checked properties in finite models, explicit premises, and captured traces. They do not cover arbitrary opaque file, network, process, or device side effects; prove that arbitrary effects are independent or inverses exact; or turn a finite quiescent trace into an unbounded liveness proof. The complete specification, theorem mapping, and refinement rules still require human audit and independent review.
+The results say only that the locked revisions satisfy the checked properties in finite models, explicit premises, and captured traces. They do not cover arbitrary opaque file, network, process, or device side effects; prove that arbitrary effects are independent or inverses exact; or turn a finite quiescent trace into an unbounded liveness proof. The [arXiv source review](arxiv-review.md) is complete for these conclusions and identifies the remaining witness, simulation, and model-migration obligations. Independent review of the specification and those arguments remains valuable.
 
 Continue with [Reproduction](reproduce.md) to run the stages. Property provenance and state projection are described in [Method](method.md) and [Architecture](architecture.md).

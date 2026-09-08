@@ -19,7 +19,7 @@ All five PR model configurations pass, and the Cordis observation audit covers 2
 
 [alignment.lock.json](../alignment.lock.json) identifies every source and observation patch. The [generated aggregate](alignment-report.json) records the executed checks; the [full snapshot](upstream-alignment.json) also preserves the upstream comparison. Run the migration through [Reproduction](reproduce.md#current-migration).
 
-This result uses the historical paper-derived model with an explicitly recorded newer TLC artifact. It is not a successful replay of the original tool lock, and it does not validate every theorem in the newer arXiv paper.
+This result uses the historical paper-derived model with an explicitly recorded newer TLC artifact. It is not a successful replay of the original tool lock. The separate [arXiv v1 review](arxiv-review.md) is complete for conclusions and premises: it retains the cleanup fixes and narrows publication, recovery, and confluence claims. Full formal validation of the arXiv calculus remains `not-validated`.
 
 The checked-in aggregate is a summary copy; its relative report paths refer to the reproduced `evidence/` directory. The [current CI workflow](../.github/workflows/upstream-alignment.yml) publishes that evidence separately from historical workflows.
 
@@ -85,16 +85,18 @@ The locked PDF has 88 pages. The current reference is [arXiv:2608.25512v1](https
 | Theorem 7 | Theorem 7, p. 11 |
 | Theorem 16 | Theorem 16, p. 15 |
 | Theorem 20 / Corollary 21 | Theorem 43 and its proof, p. 28 |
-| Lemma 54 | Lemma 59, p. 40 |
+| Lemma 54 | Lemma 59, pp. 40–41 |
 | Lemmas 55 / 56 / 57 | Lemmas 60 / 61 / 62, pp. 41 / 42 / 42 |
 | Theorem 59 | Theorem 64, p. 43 |
-| Theorem 61 / Corollary 62 | Theorem 68 / Corollary 69, p. 46 |
-| Theorem 63 | Theorem 70, p. 47 |
+| Theorem 61 / Corollary 62 | Theorem 68 / Corollary 69, pp. 46–47 |
+| Theorem 63 | Theorem 70, pp. 47–48 |
 | Theorem 64 | Theorem 71, p. 48 |
-| Theorem 66 | Theorem 73, p. 49 |
-| Theorem 73 | Theorem 80, p. 54 |
+| Theorem 66 | Theorem 73, pp. 49–50 |
+| Theorem 73 | Theorem 80, pp. 54–55 |
 
-The revision derives pairwise independence from the context discipline and adds an entangled-step argument. Recovery uses table observational equivalence. Failure moves to §4.4: error outcomes inhibit re-entry, and failed fibers remain outside confluence. Updating theorem numbers alone, or dropping `NoFailure`, would be insufficient; premises and refinement need review.
+The [completed review](arxiv-review.md) records the statement and premise differences. Independence now depends on context discipline and per-key witnesses, with a separate entangled-step argument; recovery compares observable tables. The new progress bound is `(K + 3)(V(n) + 1)`. Failure moves to §4.4 and remains outside confluence. `PairwiseIndependent` and `NoFailure` stay in the study.
+
+Two existing overstatements also need correction: the paper permits Active/target mismatch before L-Leave, and our confluence product only compares shutdown states. The implementation assembly samples cover two insertion orders, not the full theorem. The historical mismatch counts and current passing reports remain exact results of the locked checker; their property names are not certificates of general arXiv theorems.
 
 ## Repeat the behavior check
 
