@@ -2,6 +2,20 @@
 
 [English](method.md) | 中文
 
+本研究分别回答两个问题：有限模型是否满足论文导出的性质，实际实现的一次可观察执行是否遵守该模型？两个答案不能互相替代。
+
+## 本文术语
+
+| 术语 | 在本研究中的含义 |
+| --- | --- |
+| Specification（规格） | 决定哪些行为可被接受的论文规则。 |
+| Model checking（模型检查） | TLC 遍历有限状态空间，寻找反例。 |
+| Trace refinement（轨迹精化） | 将记录的实现状态与步骤映射到抽象模型。 |
+| Premise audit（前提审计） | 显式检查某项性质成立所需的假设。 |
+| Semantic mutation（语义变异） | 故意构造的无效轨迹，检查器必须拒绝它。 |
+
+[研究结果](results.zh-CN.md)提供了具体的资源顺序例子。本文解释这些证据是如何建立的。
+
 ## 性质从哪里来
 
 本研究先阅读 Cordis 论文，再观察代码。论文中的定义、引理和定理决定抽象状态、允许的转换和待检查的性质；`THEOREMS.md` 将论文页码、TLA+ operator、实现观测点与适用前提连接起来。代码只负责提供待解释的实现状态和轨迹，不能反过来决定用什么性质判断自己。
@@ -38,6 +52,9 @@ baseline 只加入观测，保存原逻辑及其精确反例；conformance 加�
 
 upstream-fix 不直接产生形式化结论。其 `formalStatus` 固定为 `not-run`，并通过精确 revision 指向阶段二中的同逻辑修复。该关系由 lock 和报告校验，而不是只写在说明文字中。
 
+<details>
+<summary>背景：从 etcd/raft 与 Specula 借鉴什么</summary>
+
 ## etcd/raft 与 Specula 的借鉴范围
 
 [etcd/raft PR #113](https://github.com/etcd-io/raft/pull/113) 是本研究的直接工程先例：它把“模型本身是否满足性质”和“实现轨迹是否被模型接受”拆成相互衔接的义务，并讨论了动作粒度、stuttering、happens-before 与模型过时等实际问题。
@@ -45,6 +62,8 @@ upstream-fix 不直接产生形式化结论。其 `formalStatus` 固定为 `not-
 [Specula](https://github.com/specula-org/Specula) 把从代码分析、规格生成到插桩、轨迹验证、模型检查和缺陷确认组织成自动化流程。其固定 v1.1.0 revision `c6aa3dfa41cd4bc7411fae40bd040924c70d9725` 在本研究中只作为轨迹生成、验证和调试参考。[Murat Demirbas 的评论](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html)指出，由实现归纳的模型本身不能单独成为同一实现符合预期语义的独立证据。
 
 因此，本研究不采用“从 Cordis 代码推导待验证不变量”这一部分。实际借鉴的是 instrumentation mapping、确定性 NDJSON、游标消费、完整 `TraceMatched`、TLC 反馈和分层定位第一处 mismatch。Cordis 论文是性质来源，Cordis `formal/` 是可执行规格权威，Specula 不是 submodule、构建依赖或 CI 依赖。
+
+</details>
 
 ## 解释规则
 

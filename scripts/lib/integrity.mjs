@@ -19,6 +19,7 @@ import {
 } from './stages.mjs'
 import {
   exists,
+  absolutePathAt,
   filesUnder,
   git,
   portableReference,
@@ -33,6 +34,7 @@ const documentationPairs = [
   ['docs/method.md', 'docs/method.zh-CN.md'],
   ['docs/reproduce.md', 'docs/reproduce.zh-CN.md'],
   ['docs/results.md', 'docs/results.zh-CN.md'],
+  ['docs/upstream-alignment.md', 'docs/upstream-alignment.zh-CN.md'],
 ]
 
 function repositoryEntries(lock) {
@@ -409,6 +411,42 @@ async function validateExistingStageCheckouts(lock) {
   }
 }
 
+async function validateAlignmentSnapshot(lock) {
+  const alignment = await readJson(resolve(studyRoot, 'alignment.lock.json'))
+  const report = await readJson(resolve(studyRoot, 'docs/alignment-report.json'))
+  assert.equal(alignment.schema, 'cordis.formal-study-alignment-lock/v1')
+  assert.equal(report.schema, 'cordis.formal-study-alignment-report/v1')
+  assert.equal(alignment.historicalStudyLockSha256, await sha256File(resolve(studyRoot, 'study.lock.json')))
+  assert.equal(report.historicalStudyLockSha256, alignment.historicalStudyLockSha256)
+  assert.equal(report.alignmentLockSha256, await sha256File(resolve(studyRoot, 'alignment.lock.json')))
+  assert.equal(alignment.specificationRevision, lock.repositories.cordis.revision)
+  assert.equal(alignment.harnessScenarioRevision, lock.repositories.deepseekHarness.revision)
+  assert.equal(report.specificationRevision, alignment.specificationRevision)
+  assert.deepEqual(report.tlaTools, alignment.tlaTools)
+  assert.equal(report.paper.commit, lock.repositories.paper.revision)
+  assert.equal(report.paper.sha256, lock.paper.sha256)
+  assert.equal(report.latestPaperFormalStatus, 'not-validated')
+  assert.equal(report.ordinaryRepositoryGates, 'not-run-by-this-command')
+  assert.equal(report.status, 'pass')
+  assert.equal(report.observations, lock.evidence.observationPointCount)
+  assert.equal(absolutePathAt(report), undefined)
+  for (const key of stageRepositoryKeys) {
+    const source = alignment.repositories[key]
+    const evidence = report.repositories[key]
+    assert.match(source.revision, /^[0-9a-f]{40}$/)
+    assert.equal(evidence.revision, source.revision)
+    assert.equal(evidence.upstreamRevision, source.upstreamRevision)
+    assert.equal(evidence.instrumentationSha256, source.instrumentation.patchSha256)
+    assert.equal(evidence.scenarios, key === 'cordis' ? lock.evidence.coreScenarioCount : lock.evidence.fullScenarioCount)
+    assert.equal(evidence.mutations, lock.evidence.mutationCount)
+  }
+  for (const patch of [alignment.cordisDependencyLock, ...stageRepositoryKeys.map(key => alignment.repositories[key].instrumentation)]) {
+    assert.equal(await sha256File(resolve(studyRoot, portableReference(patch.patch))), patch.patchSha256)
+  }
+  const snapshot = await readJson(resolve(studyRoot, 'docs/upstream-alignment.json'))
+  assert.equal(snapshot.migration.reportSha256, await sha256File(resolve(studyRoot, 'docs/alignment-report.json')))
+}
+
 /** Validate the portal lock, initialized sources, documentation, and generated evidence. */
 export async function verifyPortal(options = {}) {
   const lock = await loadStudyLock()
@@ -427,6 +465,7 @@ export async function verifyPortal(options = {}) {
     validateDocumentation(),
     validatePortalFiles(),
     validateLicenses(lock, states),
+    validateAlignmentSnapshot(lock),
   ])
   if (states.deepseekHarness.initialized) await validateDeepSeekSource(lock)
   await validateExistingStageCheckouts(lock)

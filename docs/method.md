@@ -2,6 +2,20 @@
 
 English | [中文](method.zh-CN.md)
 
+This study asks two questions: does a finite model satisfy the paper-derived properties, and does an observed implementation execution follow that model? Neither answer replaces the other.
+
+## Terms used in the study
+
+| Term | Meaning here |
+| --- | --- |
+| Specification | The paper-derived rules that determine accepted behavior. |
+| Model checking | TLC explores a finite state space and looks for a counterexample. |
+| Trace refinement | Recorded implementation states and steps are mapped to the abstract model. |
+| Premise audit | An explicit check of the assumptions under which a property applies. |
+| Semantic mutation | A deliberately invalid trace that the checker must reject. |
+
+Read [Results](results.md) for a concrete resource-ordering example. This page explains how its evidence is constructed.
+
 ## Source of properties
 
 This study reads the Cordis paper before observing code. Definitions, lemmas, and theorems in the paper determine abstract state, permitted transitions, and properties under validation. `THEOREMS.md` connects paper pages, TLA+ operators, implementation observation points, and applicability premises. Code supplies implementation states and traces to interpret; it does not choose the properties used to judge itself.
@@ -38,6 +52,9 @@ Baseline adds observation only and preserves exact counterexamples from original
 
 Upstream-fix does not directly produce a formal conclusion. Its `formalStatus` is fixed to `not-run`, with exact revisions pointing to the same logic fixes in stage two. Lock and report validators enforce this relationship rather than leaving it as prose.
 
+<details>
+<summary>Background: what we borrow from etcd/raft and Specula</summary>
+
 ## Borrowed scope from etcd/raft and Specula
 
 [etcd/raft PR #113](https://github.com/etcd-io/raft/pull/113) is the direct engineering precedent. It separates whether a model satisfies its properties from whether implementation traces are accepted by that model, and discusses practical issues such as action granularity, stuttering, happens-before information, and stale models.
@@ -45,6 +62,8 @@ Upstream-fix does not directly produce a formal conclusion. Its `formalStatus` i
 [Specula](https://github.com/specula-org/Specula) organizes code analysis, specification generation, instrumentation, trace validation, model checking, and bug confirmation into an automated workflow. Its pinned v1.1.0 revision `c6aa3dfa41cd4bc7411fae40bd040924c70d9725` is used here only as a trace-generation, validation, and debugging reference. [Murat Demirbas's review](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html) notes that a model inferred from an implementation cannot alone be independent evidence that the same implementation satisfies intended semantics.
 
 The study therefore does not adopt the step of deriving Cordis invariants from Cordis code. It borrows instrumentation mapping, deterministic NDJSON, cursor consumption, complete `TraceMatched`, TLC feedback, and layered diagnosis of the first mismatch. The Cordis paper is the property source, Cordis `formal/` is the executable-specification authority, and Specula is neither a submodule, build dependency, nor CI dependency.
+
+</details>
 
 ## Interpretation rule
 

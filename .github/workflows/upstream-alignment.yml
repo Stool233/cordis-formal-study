@@ -1,0 +1,87 @@
+name: Upstream alignment
+
+on:
+  workflow_dispatch:
+  pull_request:
+    paths:
+      - '.github/workflows/upstream-alignment.yml'
+      - 'alignment.lock.json'
+      - 'locks/*alignment*'
+      - 'locks/cordis-upstream-*.patch'
+      - 'scripts/reproduce-alignment.mjs'
+      - 'scripts/upstream-behavior.mjs'
+      - 'scripts/lib/**'
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/upstream-alignment.yml'
+      - 'alignment.lock.json'
+      - 'locks/*alignment*'
+      - 'locks/cordis-upstream-*.patch'
+      - 'scripts/reproduce-alignment.mjs'
+      - 'scripts/upstream-behavior.mjs'
+      - 'scripts/lib/**'
+
+permissions:
+  contents: read
+
+jobs:
+  alignment:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+          submodules: recursive
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - id: revisions
+        name: Read candidate revisions
+        run: |
+          node --input-type=module <<'JS'
+          import { readFileSync, appendFileSync } from 'node:fs'
+          const { repositories } = JSON.parse(readFileSync('alignment.lock.json', 'utf8'))
+          for (const key of ['cordis', 'deepseekHarness']) {
+            const revision = repositories[key].revision
+            if (!/^[a-f0-9]{40}$/.test(revision)) throw new Error('invalid revision')
+            appendFileSync(process.env.GITHUB_OUTPUT, `${key}=${revision}\n`)
+          }
+          JS
+      - uses: actions/checkout@v6
+        with:
+          repository: Stool233/cordis
+          ref: ${{ steps.revisions.outputs.cordis }}
+          path: .artifacts/forks/cordis
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/checkout@v6
+        with:
+          repository: Stool233/deepseek-harness
+          ref: ${{ steps.revisions.outputs.deepseekHarness }}
+          path: .artifacts/forks/deepseek-harness
+          fetch-depth: 0
+          persist-credentials: false
+      - run: corepack enable
+      - run: npm ci
+      - run: npm test
+      - run: npm run reproduce:alignment -- --cordis .artifacts/forks/cordis --deepseek-harness .artifacts/forks/deepseek-harness
+      - run: npm run verify -- --full
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: upstream-alignment-evidence
+          path: |
+            .artifacts/alignment/run-*/evidence/
+            !.artifacts/**/tlc/**
+            !.artifacts/**/cache/**
+            !.artifacts/**/*.jar
+          include-hidden-files: true
+          if-no-files-found: warn

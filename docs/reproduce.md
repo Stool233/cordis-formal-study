@@ -2,16 +2,65 @@
 
 English | [中文](reproduce.zh-CN.md)
 
-This guide is the public interface to the three research stages. Read [Research process and results](results.md) first if you only need to understand the conclusions.
+This guide covers the current migration and the original three-stage study. Read [Research process and results](results.md) first if you only need to understand the conclusions.
 
-## Environment and bootstrap
+## Choose the experiment
 
-Requirements are Node.js 24, Java 21, Git, and Corepack. Initial bootstrap fetches six pinned implementation revisions and dependencies, so it needs network access. The minimal AgentLoop scenario itself makes no external model or network call.
+| Goal | Entry point | Version authority |
+| --- | --- | --- |
+| Verify the fixes migrated to current upstream | `npm run reproduce:alignment` | [alignment.lock.json](../alignment.lock.json) |
+| Rerun the original three-stage study | `npm run reproduce:study` | [study.lock.json](../study.lock.json) |
+
+Both paths need Node.js 24, Java 21, Git, and Corepack. They test different source snapshots and tool hashes; their reports are kept separately.
+
+## Set up the portal
+
+For a fresh checkout:
 
 ```sh
 git clone https://github.com/Stool233/cordis-formal-study.git
 cd cordis-formal-study
 npm ci
+```
+
+If you already have the portal, run `npm ci` in its root. Run the remaining commands there.
+
+## Current migration
+
+Clone the two forks beside the portal if they are not already present:
+
+```sh
+git clone --branch codex/upstream-alignment-2026-09-09 https://github.com/Stool233/cordis.git ../cordis
+git clone --branch codex/upstream-alignment-2026-09-09 https://github.com/Stool233/deepseek-harness.git ../deepseek-harness
+```
+
+Use the exact candidate commits. Save any local edits before changing revisions:
+
+```sh
+git -C ../cordis checkout --detach 18c327f4566e8f640737c43a480e6d74a0673579
+git -C ../deepseek-harness checkout --detach fdcd1ce36a296ab2288bf407fccba4c8fa634963
+npm run reproduce:alignment -- --cordis ../cordis --deepseek-harness ../deepseek-harness
+```
+
+The command rejects dirty or wrong-revision inputs. It installs locked dependencies, creates separate worktrees, applies hash-checked observation patches, and extracts the historical specification into a private run directory. Only that specification copy receives the newer TLC hash; the historical lock and source snapshots remain unchanged.
+
+Success requires all four original behavior assertions in each trace-free implementation, the PR models, 29 Cordis observation points, 13 Cordis traces, 17 Harness traces, and rejection of four mutations for each implementation. Original behavior assertions remain intact; their expected failure set becomes empty for the fixed candidates.
+
+The final line prints `.artifacts/alignment/run-<id>/evidence/report.json`. It records the paper, tool, source revisions, source trees, and patch hashes. An interrupted or failed run has no passing aggregate report. Worktrees and dependencies sit outside the evidence directory.
+
+Repository tests, builds, lint, and documentation checks are separate from this formal command. Their commands are in the [Cordis fork guide](https://github.com/Stool233/cordis/blob/main/docs/formal-study.md) and [Harness fork guide](https://github.com/Stool233/deepseek-harness/blob/master/docs/cordis-study.md); measured results belong to [Upstream alignment](upstream-alignment.md).
+
+## Historical experiment: tool availability
+
+The original TLC 1.8.0 asset was replaced upstream. A fresh historical formal run currently stops at its pinned hash check. A local JAR is usable only if it matches the original hash; changing that hash would create a different experiment. See [the tool comparison](upstream-alignment.md#changed-tlc-release-asset).
+
+The instructions below preserve the original experiment. `reproduce:upstream-fix` runs ordinary checks and does not require TLC.
+
+## Historical bootstrap
+
+Initial bootstrap fetches six pinned implementation revisions and dependencies, so it needs network access. The minimal AgentLoop scenario itself makes no external model or network call.
+
+```sh
 npm run bootstrap:study
 ```
 
@@ -96,6 +145,9 @@ npm run verify -- --full
 
 `study-report.json` uses `cordis.formal-study-report/v1` for automation. `study-report.md` provides a bilingual reader summary. Neither contains machine-local absolute paths.
 
+<details>
+<summary>Reference: low-level profiles, CI, and release packaging</summary>
+
 ## Low-level stage-two profiles
 
 Existing commands remain available:
@@ -115,11 +167,12 @@ These are lower-level stage-two profiles and do not replace the three-stage `rep
 | Workflow | Trigger | Work performed |
 | --- | --- | --- |
 | Integrity | Every push and PR | `npm ci`, unit tests, lock/gitlink/schema/document integrity; no TLC. |
+| Upstream alignment | Relevant PR, relevant `main` push, manual | Check out candidates from `alignment.lock.json`, run `reproduce:alignment`, and publish its evidence. |
 | Conformance | Relevant PR, relevant `main` push, manual | PR/push runs `bootstrap:study` + `reproduce:study`; manual dispatch selects any stage or the default `study`. |
 | Nightly | Monday 03:17 UTC, manual | Full three-stage study, then `reproduce:nightly`. |
 | Release | `v*` tag | Full study, nightly, integrity, evidence packaging, and GitHub Release. |
 
-Pushing only a Cordis or DeepSeek Harness research branch does not trigger the portal's complete cross-repository study. Portal Conformance and Nightly are the primary entry points.
+Pushing only a Cordis or DeepSeek Harness research branch does not trigger the portal's cross-repository checks. Upstream alignment verifies the current migration; Conformance and Nightly reproduce the historical study and currently stop at the original TLC hash check.
 
 ## Release evidence
 
@@ -130,6 +183,8 @@ npm run package -- --version 0.1.0
 ```
 
 This writes `dist/cordis-formal-study-v0.1.0-evidence.tar.gz` and `dist/SHA256SUMS`. The archive includes baseline counterexamples, conformance models/traces/mutations, upstream-fix ordinary gates, nightly evidence, and aggregate reports. It excludes checkouts, dependencies, JARs, TLC temporary directories, PDFs, and machine paths.
+
+</details>
 
 ## Common failures
 

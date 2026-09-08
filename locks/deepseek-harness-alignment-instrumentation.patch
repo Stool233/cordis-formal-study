@@ -1,0 +1,541 @@
+diff --git a/scripts/cordis-paper-scenarios.ts b/scripts/cordis-paper-scenarios.ts
+new file mode 100644
+index 0000000000..807755781d
+--- /dev/null
++++ b/scripts/cordis-paper-scenarios.ts
+@@ -0,0 +1,149 @@
++import assert from 'node:assert/strict'
++import AgentLoop from '@deepseek-ai/dsh-agent-loop'
++import { mountAgentLoopTestDependencies } from '@deepseek-ai/dsh-agent-loop-testkit'
++import type { Context, Fiber } from '@deepseek-ai/cordis'
++
++interface TraceAssumptions {
++  readonly AcyclicDependencies: boolean
++  readonly FiniteNames: boolean
++  readonly BoundedIterator: boolean
++  readonly PairwiseIndependent: boolean
++  readonly TotalProvision: boolean
++  readonly NoFailure: boolean
++}
++
++interface ScenarioRecorder {
++  readonly root: Context
++  readonly fiberState: Readonly<Record<string, number>>
++}
++
++interface ScenarioDefinition {
++  readonly name: string
++  readonly assumptions: TraceAssumptions
++  readonly requiredProperties: readonly string[]
++  run(implementation: unknown, recorder: ScenarioRecorder): Promise<void>
++}
++
++const assumptions = {
++  AcyclicDependencies: true,
++  FiniteNames: true,
++  BoundedIterator: true,
++  PairwiseIndependent: true,
++  TotalProvision: true,
++  NoFailure: true,
++}
++
++const requiredProperties = [
++  'Preservation',
++  'RecoveryExactness',
++  'Ordering',
++  'ResolutionCoherence',
++  'ProgressBound',
++]
++
++function deferred(): { readonly promise: Promise<void>; readonly resolve: () => void } {
++  let resolve!: () => void
++  const promise = new Promise<void>((done) => {
++    resolve = done
++  })
++  return { promise, resolve }
++}
++
++/** DeepSeek Harness scenarios appended to the upstream Cordis conformance kit. */
++export const scenarios = [
++  {
++    name: 'vendored-reentrant-dispose',
++    assumptions,
++    requiredProperties,
++    async run(_implementation, recorder) {
++      const restored: string[] = []
++      const started = deferred()
++      let disposal!: Promise<void>
++      const fiber = recorder.root.plugin({
++        name: 'reentrant-dispose',
++        apply(ctx: Context) {
++          ctx.effect(() => () => { restored.push('cleanup') }, 'reentrant cleanup')
++          disposal = ctx.fiber.dispose()
++          started.resolve()
++        },
++      })
++      await started.promise
++      await disposal
++      assert.deepEqual(restored, ['cleanup'])
++      assert.equal(fiber.state, recorder.fiberState.DISPOSED)
++    },
++  },
++  {
++    name: 'vendored-pending-effect',
++    assumptions,
++    requiredProperties,
++    async run(_implementation, recorder) {
++      let applied = false
++      let restored = 0
++      const seen = new WeakSet<Fiber>()
++      recorder.root.on('internal/plugin', (fiber) => {
++        if (fiber.runtime?.name !== 'pending-effect' || fiber.uid === null || seen.has(fiber)) return
++        seen.add(fiber)
++        fiber.ctx.effect(() => () => { restored++ }, 'pending observer effect')
++      })
++      const fiber = recorder.root.plugin({
++        name: 'pending-effect',
++        inject: ['missing-service'],
++        apply() {
++          applied = true
++        },
++      })
++      await fiber.dispose()
++      assert.equal(applied, false)
++      assert.equal(restored, 1)
++      assert.equal(fiber.state, recorder.fiberState.DISPOSED)
++    },
++  },
++  {
++    name: 'vendored-async-cleanup-join',
++    assumptions,
++    requiredProperties,
++    async run(_implementation, recorder) {
++      const started = deferred()
++      const release = deferred()
++      let cleanupCalls = 0
++      let disposeEffect!: () => Promise<void>
++      const fiber = await recorder.root.plugin({
++        name: 'async-cleanup-join',
++        apply(ctx: Context) {
++          disposeEffect = ctx.effect(() => async () => {
++            cleanupCalls++
++            started.resolve()
++            await release.promise
++          }, 'joined cleanup')
++        },
++      })
++      const direct = disposeEffect()
++      await started.promise
++      let ownerSettled = false
++      const owner = fiber.dispose().then(() => { ownerSettled = true })
++      await Promise.resolve()
++      assert.equal(ownerSettled, false)
++      release.resolve()
++      await Promise.all([direct, owner])
++      assert.equal(cleanupCalls, 1)
++      assert.equal(fiber.state, recorder.fiberState.DISPOSED)
++    },
++  },
++  {
++    name: 'deepseek-agent-loop-assembly',
++    assumptions,
++    requiredProperties,
++    async run(_implementation, recorder) {
++      const root = recorder.root
++      await mountAgentLoopTestDependencies(root)
++      const loop = await root.plugin(AgentLoop, { agents: [] })
++      assert.equal(loop.state, recorder.fiberState.ACTIVE)
++      assert.ok(Object.keys(loop.store ?? {}).length > 0)
++      await root.fiber.dispose()
++      assert.equal(loop.state, recorder.fiberState.DISPOSED)
++      assert.equal(root.registry.size, 0)
++      assert.equal(root.fiber.inertia, undefined)
++    },
++  },
++] satisfies readonly ScenarioDefinition[]
+diff --git a/vendor/README.md b/vendor/README.md
+index 777d803709..0c9d58f7e8 100644
+--- a/vendor/README.md
++++ b/vendor/README.md
+@@ -52,6 +52,8 @@ Keep this log exhaustive — every divergence from upstream must be listed.
+ 
+ 20. **Paper lifecycle ordering in `cordis/src/fiber.ts`**: retain retiring fibers in their runtime list until teardown settles, remove only the matching runtime identity, and wait for notified dependents before provider recovery. Publish the unloading state before changing the dependency epoch, then capture the activation epoch at one deferred checkpoint so disposal cancels stale activation without delaying transitive consumers twice. Synchronous publication failure still removes the runtime entry immediately. Existing reentrant effect ownership, cleanup joining, and lazy config resolution remain in effect. The regressions are in `packages/extensions/tool-cordis/tests/cordis-lifecycle.spec.ts`; the study explanation is in [docs/cordis-study.md](../docs/cordis-study.md). This is an additional local patch over the manifest's pinned source; it does not replace that source revision.
+ 
++21. **Diagnostic trace overlay**: the study's separate instrumented checkout adds `cordis/src/formal-trace.ts` and synchronous observations in `cordis/src/fiber.ts` and `cordis/src/reflect.ts`. These observations feed the pinned paper-derived kit and are absent from the migration branch's runtime source. The applied patch hash identifies this test-only overlay.
++
+ ## Sync procedure
+ 
+ To update a vendored package from upstream:
+diff --git a/vendor/cordis/src/fiber.ts b/vendor/cordis/src/fiber.ts
+index ced92ef8ee..e4b40d5968 100644
+--- a/vendor/cordis/src/fiber.ts
++++ b/vendor/cordis/src/fiber.ts
+@@ -5,6 +5,7 @@ import type { Plugin } from './registry.ts'
+ import { buildOuterStack, composeError, DisposableList, getTraceable, isConstructor, isObject, symbols } from './utils.ts'
+ import type { Impl } from './reflect.ts'
+ import type { StandardSchemaV1 } from '@standard-schema/spec'
++import { emitCordisPaperTrace } from './formal-trace.ts'
+ 
+ declare module './context.ts' {
+   export interface Context extends Pick<Fiber, 'effect'> {
+@@ -174,6 +175,7 @@ export namespace CordisError {
+ }
+ 
+ const INACTIVE = '__INACTIVE__'
++const inverseRoles = new WeakMap<Disposable, 'effect' | 'structural'>()
+ 
+ /**
+  * Runtime instance of one plugin application.
+@@ -208,6 +210,7 @@ export class Fiber {
+   private _error: any
+   private _runner: EffectRunner<string>
+   private _store: Dict<Impl> = Object.create(null)
++  private _target: Dict<Impl> = Object.create(null)
+   private _pendingDependents = new Set<Fiber>()
+ 
+   /**
+@@ -272,6 +275,11 @@ export class Fiber {
+             this.ctx.registry.delete(runtime.callback)
+           }
+         }
++        emitCordisPaperTrace(this.ctx, {
++          kind: 'fiber-created',
++          fiber: this,
++          parent: parent.fiber,
++        })
+         return async () => {
+           this.uid = null
+           emitPluginDisposed(this.context, this)
+@@ -286,6 +294,7 @@ export class Fiber {
+               return FiberState.UNLOADING
+             })
+           }
++          emitCordisPaperTrace(this.ctx, { kind: 'fiber-retired', fiber: this })
+           // `this.inertia` itself should never reject — both `_reload` and
+           // `_unload` swallow their own work errors via `ctx.logger.error`.
+           // If it *does* reject, the only remaining cause is the logger
+@@ -296,6 +305,7 @@ export class Fiber {
+             await this.inertia
+           }
+           removeRuntime()
++          emitCordisPaperTrace(this.ctx, { kind: 'fiber-removed', fiber: this })
+         }
+       }, 'ctx.plugin()')
+ 
+@@ -359,29 +369,48 @@ export class Fiber {
+ 
+   private _execute<T>(runner: EffectRunner<T>) {
+     const oldEpoch = runner.epoch
+-    return composeError((info) => {
++    const execute = () => composeError((info) => {
+       const safeCollect = (dispose: void | Disposable) => {
+         if (typeof dispose === 'function') {
++          if (!inverseRoles.has(dispose)) inverseRoles.set(dispose, 'effect')
+           runner.collect(dispose)
++          if (inverseRoles.get(dispose) !== 'structural') {
++            emitCordisPaperTrace(this.ctx, {
++              kind: 'inverse-collected',
++              fiber: this,
++              iterator: runner,
++              inverse: dispose,
++            })
++          }
+         } else if (!isNullable(dispose)) {
+           throw new TypeError('Invalid effect')
+         }
+       }
++      const land = (done: boolean, dispose?: void | Disposable) => {
++        safeCollect(dispose)
++        emitCordisPaperTrace(this.ctx, {
++          kind: 'iteration-landed',
++          fiber: this,
++          iterator: runner,
++          done,
++          inverse: typeof dispose === 'function' && inverseRoles.get(dispose) !== 'structural' ? dispose : undefined,
++        })
++      }
+       const effect: Effect = runner.execute.call(this)
+       if (typeof effect === 'function') {
+-        return runner.collect(effect)
++        return land(true, effect)
+       } else if (isNullable(effect)) {
+-        // return
++        return land(true)
+       } else if (!isObject(effect)) {
+         throw new TypeError('Invalid effect')
+       } else if ('then' in effect) {
+-        return effect.then(safeCollect)
++        return effect.then(dispose => land(true, dispose))
+       } else if (Symbol.iterator in effect) {
+         info.error = new Error()
+         const iter = effect[Symbol.iterator]()
+         while (true) {
+           const result = iter.next()
+-          safeCollect(result.value)
++          land(result.done === true, result.value)
+           if (result.done) return
+         }
+       } else if (Symbol.asyncIterator in effect) {
+@@ -393,7 +422,7 @@ export class Fiber {
+           while (true) {
+             if (runner.epoch !== oldEpoch) return
+             const result = await iter.next()
+-            safeCollect(result.value)
++            land(result.done === true, result.value)
+             if (result.done) return
+           }
+         })()
+@@ -401,6 +430,48 @@ export class Fiber {
+         throw new TypeError('Invalid effect')
+       }
+     }, runner.getOuterStack)
++    try {
++      const result = execute()
++      if (!isObject(result) || !('then' in result)) return result
++      return Promise.resolve(result).catch((reason) => {
++        emitCordisPaperTrace(this.ctx, {
++          kind: 'iteration-raised',
++          fiber: this,
++          iterator: runner,
++          reason,
++        })
++        throw reason
++      })
++    } catch (reason) {
++      emitCordisPaperTrace(this.ctx, {
++        kind: 'iteration-raised',
++        fiber: this,
++        iterator: runner,
++        reason,
++      })
++      throw reason
++    }
++  }
++
++  private _runInverse(dispose: Disposable) {
++    const structural = inverseRoles.get(dispose) === 'structural'
++    emitCordisPaperTrace(this.ctx, { kind: 'inverse-started', fiber: this, inverse: dispose, structural })
++    try {
++      const result = runDisposable(dispose)
++      if (!isObject(result) || !('then' in result)) {
++        emitCordisPaperTrace(this.ctx, { kind: 'inverse-finished', fiber: this, inverse: dispose, structural, failed: false })
++        return result
++      }
++      return Promise.resolve(result).then(() => {
++        emitCordisPaperTrace(this.ctx, { kind: 'inverse-finished', fiber: this, inverse: dispose, structural, failed: false })
++      }, (reason) => {
++        emitCordisPaperTrace(this.ctx, { kind: 'inverse-finished', fiber: this, inverse: dispose, structural, failed: true })
++        throw reason
++      })
++    } catch (reason) {
++      emitCordisPaperTrace(this.ctx, { kind: 'inverse-finished', fiber: this, inverse: dispose, structural, failed: true })
++      throw reason
++    }
+   }
+ 
+   /**
+@@ -434,9 +505,9 @@ export class Fiber {
+       let task!: void | Promise<void>
+       for (const disposable of disposables.splice(0).reverse()) {
+         if (task) {
+-          task = task.then(() => runDisposable(disposable))
++          task = task.then(() => this._runInverse(disposable))
+         } else {
+-          const result = runDisposable(disposable)
++          const result = this._runInverse(disposable)
+           if (isObject(result) && 'then' in result) {
+             task = result as any
+           }
+@@ -517,6 +588,7 @@ export class Fiber {
+       })
+     }, symbols.effect, meta) as AsyncDisposable
+     effectInertia.set(wrapper, () => inFlight)
++    inverseRoles.set(wrapper, 'structural')
+ 
+     // Make the effect visible to a reentrant owner unload before execute()
+     // runs any plugin code. Async teardown stays owner-visible until it
+@@ -586,6 +658,12 @@ export class Fiber {
+     const oldState = this.state
+     this.state = callback() ?? this._getState()
+     if (oldState === this.state) return
++    emitCordisPaperTrace(this.ctx, {
++      kind: 'state-changed',
++      fiber: this,
++      previous: oldState,
++      current: this.state,
++    })
+     // FIXME internal/fiber-info
+     this.context.emit('internal/status', this, oldState)
+ 
+@@ -634,11 +712,20 @@ export class Fiber {
+   private _setEpoch(epoch: string) {
+     const oldEpoch = this._runner.epoch
+     if (epoch === oldEpoch) return
++    const previous: Impl[] = Object.values(this._target)
++    const target: Dict<Impl> = epoch === INACTIVE ? Object.create(null) : { ...this._store }
+     const beginsReload = epoch !== INACTIVE && oldEpoch === INACTIVE
+     if (!this.inertia && !beginsReload) {
+       this._updateState(() => FiberState.UNLOADING)
+     }
++    this._target = target
+     this._runner.epoch = epoch
++    emitCordisPaperTrace(this.ctx, {
++      kind: 'target-changed',
++      fiber: this,
++      previous,
++      current: Object.values(target),
++    })
+     if (this.inertia) return
+     if (beginsReload) {
+       this._updateState(() => {
+@@ -657,7 +744,14 @@ export class Fiber {
+   }
+ 
+   private async _reload(oldEpoch: string) {
++    const previous: Impl[] = this.store ? Object.values(this.store) : []
+     this.store = { ...this._store }
++    emitCordisPaperTrace(this.ctx, {
++      kind: 'committed-changed',
++      fiber: this,
++      previous,
++      current: Object.values(this.store),
++    })
+     try {
+       // The deferred call into _reload is the cancellation checkpoint. Do not
+       // run plugin code after a disposer has invalidated this activation.
+@@ -693,13 +787,20 @@ export class Fiber {
+         await composeError(async (info) => {
+           await Promise.resolve()
+           info.error = new Error()
+-          await runDisposable(dispose)
++          await this._runInverse(dispose)
+         }, this._runner.getOuterStack)
+       } catch (reason) {
+         this.ctx.logger.error(reason)
+       }
+     }))
++    const previous: Impl[] = this.store ? Object.values(this.store) : []
+     this.store = undefined
++    emitCordisPaperTrace(this.ctx, {
++      kind: 'committed-changed',
++      fiber: this,
++      previous,
++      current: [],
++    })
+     this._updateState(() => {
+       if (this._runner.epoch === INACTIVE) {
+         this.inertia = undefined
+diff --git a/vendor/cordis/src/formal-trace.ts b/vendor/cordis/src/formal-trace.ts
+new file mode 100644
+index 0000000000..f98bc12458
+--- /dev/null
++++ b/vendor/cordis/src/formal-trace.ts
+@@ -0,0 +1,62 @@
++import type { Context } from './context.ts'
++import type { Disposable, Fiber, FiberState } from './fiber.ts'
++import type { Impl } from './reflect.ts'
++
++const paperTraceSink = Symbol.for('cordis.paper-trace.sink')
++
++/** Internal mutation observation consumed only by paper-conformance tests. */
++export type CordisPaperTraceEvent =
++  | { kind: 'fiber-created', fiber: Fiber, parent: Fiber }
++  | { kind: 'fiber-retired', fiber: Fiber }
++  | { kind: 'fiber-removed', fiber: Fiber }
++  | { kind: 'target-changed', fiber: Fiber, previous: readonly Impl[], current: readonly Impl[] }
++  | { kind: 'state-changed', fiber: Fiber, previous: FiberState, current: FiberState }
++  | { kind: 'committed-changed', fiber: Fiber, previous: readonly Impl[], current: readonly Impl[] }
++  | { kind: 'iteration-landed', fiber: Fiber, iterator: object, done: boolean, inverse?: Disposable }
++  | { kind: 'iteration-raised', fiber: Fiber, iterator: object, reason: unknown }
++  | { kind: 'inverse-collected', fiber: Fiber, iterator: object, inverse: Disposable }
++  | { kind: 'inverse-started', fiber: Fiber, inverse: Disposable, structural: boolean }
++  | { kind: 'inverse-finished', fiber: Fiber, inverse: Disposable, structural: boolean, failed: boolean }
++  | { kind: 'service-provided', fiber: Fiber, implementation: Impl, realm: symbol }
++  | { kind: 'service-withdrawing', fiber: Fiber, implementation: Impl, realm: symbol }
++  | { kind: 'service-withdrawn', fiber: Fiber, implementation: Impl, realm: symbol }
++
++/** Synchronous root-scoped sink used by source-only paper-conformance tests. */
++export type CordisPaperTraceSink = (event: CordisPaperTraceEvent) => void
++
++type TraceRoot = Context & {
++  [paperTraceSink]?: CordisPaperTraceSink
++}
++
++/**
++ * Install one internal paper trace sink.
++ *
++ * @param ctx - context whose root owns the sink.
++ * @param sink - synchronous observation consumer.
++ * @returns disposer that removes this sink while it remains installed.
++ */
++export function installCordisPaperTraceSink(ctx: Context, sink: CordisPaperTraceSink): () => void {
++  const root = ctx.root as TraceRoot
++  if (root[paperTraceSink]) {
++    throw new Error('a Cordis paper trace sink is already installed on this root context')
++  }
++  Object.defineProperty(root, paperTraceSink, {
++    configurable: true,
++    value: sink,
++  })
++  return () => {
++    if (root[paperTraceSink] === sink) delete root[paperTraceSink]
++  }
++}
++
++/**
++ * Emit an internal paper observation synchronously when a sink is installed.
++ *
++ * @param ctx - context whose root may own a sink.
++ * @param event - complete mutation observation.
++ * @returns nothing.
++ */
++export function emitCordisPaperTrace(ctx: Context, event: CordisPaperTraceEvent): void {
++  const sink = (ctx.root as TraceRoot)[paperTraceSink]
++  sink?.(event)
++}
+diff --git a/vendor/cordis/src/reflect.ts b/vendor/cordis/src/reflect.ts
+index 7bbe1ae991..6169401f73 100644
+--- a/vendor/cordis/src/reflect.ts
++++ b/vendor/cordis/src/reflect.ts
+@@ -3,6 +3,7 @@ import type { Dict } from '@deepseek-ai/cosmokit'
+ import { Context } from './context.ts'
+ import { getTraceable, symbols, withProps } from './utils.ts'
+ import { Fiber, FiberState } from './fiber.ts'
++import { emitCordisPaperTrace } from './formal-trace.ts'
+ 
+ declare module './context.ts' {
+   interface Context {
+@@ -291,15 +292,33 @@ export class ReflectService {
+       }
+       this.store[key] = impl
+       this.ctx.fiber.store![name] = impl
++      emitCordisPaperTrace(this.ctx, {
++        kind: 'service-provided',
++        fiber: this.ctx.fiber,
++        implementation: impl,
++        realm: key,
++      })
+       if (this.ctx.fiber.state === FiberState.ACTIVE) {
+         this.notify([name])
+       }
+       return async () => {
++        emitCordisPaperTrace(this.ctx, {
++          kind: 'service-withdrawing',
++          fiber: this.ctx.fiber,
++          implementation: impl,
++          realm: key,
++        })
+         delete this.store[key]
+         const fibers = this.notify([name])
+         await Promise.allSettled(fibers.map(fiber => fiber.await()))
+         // ensure self access before dependencies cleanup
+         delete this.ctx.fiber.store![name]
++        emitCordisPaperTrace(this.ctx, {
++          kind: 'service-withdrawn',
++          fiber: this.ctx.fiber,
++          implementation: impl,
++          realm: key,
++        })
+       }
+     }, `ctx.provide(${JSON.stringify(name)})`)
+   }

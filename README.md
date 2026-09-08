@@ -2,88 +2,55 @@
 
 English | [中文](README.zh-CN.md)
 
-> **Research status — early-stage work in progress.** The complete TLA+ specification, paper-to-theorem mapping, and refinement rules still require human audit and independent review.
+Does Cordis's plugin lifecycle behave as its paper describes? This independent study connects paper-derived TLA+ models with real execution traces from Cordis and DeepSeek Harness, then tests the corresponding runtime fixes.
 
-This independent, unofficial, reproducible study examines alignment among the Cordis paper, upstream Cordis, and the vendored Cordis in DeepSeek Harness. The paper determines the properties under validation; the implementations are validation subjects. [The locked Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal) is the sole executable-specification authority. This portal pins revisions, orchestrates reproduction, and explains the results.
+Start with the findings below. To work with current code, use the [upstream alignment report](docs/upstream-alignment.md); to rerun the original experiment, use the [three-stage reproduction guide](docs/reproduce.md).
 
-## Research background
+## What we found
 
-The study is motivated by [etcd/raft PR #113, “TLA+ Trace validation”](https://github.com/etcd-io/raft/pull/113): TLC checks an abstract algorithm model, while real execution traces check whether the implementation's observed states and transitions are accepted by that model, connecting specification and code.
+The original implementations expose two related ordering problems: a provider can recover resources while a consumer is still cleaning up, and dependency changes can become visible before a compatible lifecycle state. Ordinary tests also identify a transitive activation scheduling issue.
 
-[Specula](https://github.com/specula-org/Specula) organizes code analysis, specification generation, instrumentation, trace validation, model checking, and bug confirmation into an automated workflow. [Murat Demirbas's review of Specula](https://muratbuffalo.blogspot.com/2026/08/specula-scaling-formal-specifications.html) emphasizes the importance of independent specification provenance in avoiding circular evidence. This study derives the abstract properties under validation from definitions, lemmas, and theorems in the Cordis paper, treats the Cordis and DeepSeek Harness implementations as validation subjects, and checks whether the paper specification accepts their execution traces. It uses Specula's techniques for test instrumentation, deterministic trace generation, TLA+ cursor consumption and `TraceMatched`, TLC checking, and counterexample diagnosis.
+| Historical experiment | Cordis | Harness's vendored Cordis |
+| --- | ---: | ---: |
+| Trace scenarios rejected by the model | 9 of 13 | 10 of 17 |
+| Failing ordinary behavior checks | 4 of 4 | 3 of 4 |
+| Accepted traces after the fixes | 13 of 13 | 17 of 17 |
+| Semantic mutations rejected | 4 of 4 | 4 of 4 |
 
-## One-minute outcome
+These are scenario counts, not independent bug counts. [Results](docs/results.md) explains the counterexamples, fixes, and evidence. All historical numbers refer to the revisions in [study.lock.json](study.lock.json).
 
-- The study connects paper-derived properties, bounded TLA+ models, implementation-trace refinement, ordinary regressions, and semantic mutations. Upstream and vendored Cordis share the core scenarios.
-- Baseline preserves the original runtime logic and adds only test instrumentation. The locked results contain 9 mismatching trace scenarios and 4 failing behavior checks in Cordis, and 10 mismatching trace scenarios and 3 failing behavior checks in vendored Cordis. The numbers count scenarios and behavior checks; several scenarios can expose the same underlying issue through different schedules.
-- Investigation groups the evidence into two paper-related deviations: provider recovery/retirement ordering, and publication ordering for lifecycle, target, and committed view. Ordinary regression testing also found one adjacent transitive-activation scheduling issue.
-- The corrected conformance stage passes 13 Cordis core traces, 17 complete vendored traces, 29 observation points, 4 semantic mutants, the bounded PR models, and relevant ordinary tests.
-- The upstream-fix stage removes research instrumentation and keeps only logic corrections and regression tests. It explicitly reports `formalStatus: "not-run"`; its formal rationale points to the conformance revisions that exercise the same logic fixes.
+## Current code and historical evidence
 
-See [Research process and results](docs/results.md) for the complete evidence and interpretation.
+The 2026-09-09 check uses official Cordis `f8ea3cd` and Harness `5dda764`. The two forks have separate migration branches based on those revisions. Their fixes and verification are recorded in [Upstream alignment](docs/upstream-alignment.md).
 
-## Three-stage research process
+The original three-stage snapshots remain unchanged. The official TLC 1.8.0 download has a different hash from the historical lock, so a fresh original formal run stops at hash verification. The current migration records the newer tool explicitly. It still uses the historical paper-derived specification; the newer arXiv paper requires a separate theorem and premise review.
 
-```mermaid
-flowchart LR
-  A[1. baseline<br/>original logic + trace instrumentation<br/>reproduce exact mismatches] --> B[2. conformance<br/>logic fixes + trace instrumentation<br/>TLC, traces, mutations, tests pass]
-  B --> C[3. upstream-fix<br/>logic fixes + regressions<br/>no research instrumentation; formalStatus: not-run]
-```
+## Three stages, three different meanings of success
 
-| Stage | Cordis | DeepSeek Harness | One-command reproduction | What success means |
-| --- | --- | --- | --- | --- |
-| `baseline` | [`research/paper-trace-baseline` @ `48c4604`](https://github.com/Stool233/cordis/tree/48c4604005b80b4e4fd7706088f5b721a16ea8de) | [`research/paper-trace-baseline` @ `59c8608`](https://github.com/Stool233/deepseek-harness/tree/59c86088a75c4afe99d28244baedaa159231c46c) | `npm run reproduce:baseline` | Exits zero only when the exact locked 9/10 trace mismatches and 4/3 behavior failures are reproduced. |
-| `conformance` | [`research/paper-conformance` @ `d06ee04`](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b) | [`research/paper-conformance` @ `4b00212`](https://github.com/Stool233/deepseek-harness/tree/4b00212558e33a0fee5dacb740621db16b1d43dc) | `npm run reproduce:conformance` | Bounded models, all traces, premise audits, mutations, AgentLoop, and ordinary regressions pass. |
-| `upstream-fix` | [`fix/paper-conformance` @ `3120ba9`](https://github.com/Stool233/cordis/tree/3120ba9928bd5fe37e34f50e521077121000f050) | [`fix/paper-conformance` @ `6bb3cdd`](https://github.com/Stool233/deepseek-harness/tree/6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3) | `npm run reproduce:upstream-fix` | Trace/formal research code is absent, ordinary source gates pass, and the report records `formalStatus: "not-run"`. |
+1. **Baseline — observe the original behavior.** Keep runtime logic and add test observations. Success means reproducing the exact known failures.
+2. **Conformance — validate the fix.** Apply corrections and check models, implementation traces, premises, mutations, and ordinary regressions.
+3. **Upstream-fix — review the runtime patch.** Keep logic fixes and regressions, remove research instrumentation. Its direct formal status is `not-run`; it points to stage two for formal evidence.
 
-The three branches preserve successive reproducible snapshots of the research process: baseline records observations from the original implementation, conformance records instrumented validation of the corrections, and upstream-fix records the trace-free logic patch and regression tests. `study.lock.json` makes the stage order, branch roles, complete SHAs, and expected outcomes machine-checkable.
+[Reproduction](docs/reproduce.md) gives the commands. [Architecture](docs/architecture.md) records branches, source ownership, and reports.
 
-## What the study found
+## Three repositories
 
-| Finding | Baseline behavior | Paper property | Correction and final evidence |
-| --- | --- | --- | --- |
-| Provider recovery and retirement ordering | A provider inverse could run before asynchronous consumer teardown completed; a retiring consumer could disappear from discovery too early. | Recovery exactness, Ordering, and retirement/visibility invariants | Keep retiring consumers discoverable until quiescence and await notified dependents before restoring the provider accumulator; traces and lifecycle regressions pass. |
-| Lifecycle, target, and committed publication | An incompatible target or committed provider could become visible before the corresponding lifecycle transition, exposing a stale binding. | Preservation, Resolution coherence, and committed-lifecycle invariants | Publish lifecycle transitions before incompatible target/committed changes and compare provider identity; the traces and identity mutant pass. |
-| Transitive activation scheduling | An awaited provider could return while a transitive consumer remained `LOADING`. | An adjacent implementation scheduling regression, motivated by progress but not claimed as a standalone paper-theorem counterexample. | Remove the duplicate deferred cancellation checkpoint while preserving stale-activation invalidation; ordinary regression and corrected traces pass. |
-
-The investigations into concurrent recovery of independent top-level effects and the distinction between `Plugin.provide` and dynamic `ctx.provide()` produced two applicability-boundary notes. See [Results](docs/results.md#investigated-but-not-classified-as-defects) for details.
-
-## Reproduce by goal
-
-Requirements are Node.js 24, Java 21, Git, and Corepack. The first run needs network access for source and dependencies; downloaded TLA+ JARs are checked against pinned hashes.
-
-```sh
-git clone https://github.com/Stool233/cordis-formal-study.git
-cd cordis-formal-study
-npm ci
-npm run bootstrap:study
-```
-
-Then choose a goal:
-
-| Goal | Command |
+| Repository | What to find there |
 | --- | --- |
-| Reproduce why the original implementation is rejected | `npm run reproduce:baseline` |
-| Reproduce the complete corrected formal and implementation evidence | `npm run reproduce:conformance` |
-| Inspect the trace-free patch intended for upstream review | `npm run reproduce:upstream-fix` |
-| Reproduce the whole study in order and write aggregate reports | `npm run reproduce:study` |
+| **This portal** | Findings, exact versions, reproduction commands, and cross-repository reports. |
+| [Cordis fork](https://github.com/Stool233/cordis) | The framework, migrated lifecycle fixes, and the pinned executable specification on the conformance branch. |
+| [Harness fork](https://github.com/Stool233/deepseek-harness) | Vendored Cordis and integration checks for cleanup, persistence, and AgentLoop. |
 
-`bootstrap:study` creates six detached, SHA-isolated checkouts under `.artifacts/checkouts/`. An existing checkout that is dirty or at the wrong HEAD is rejected, never reset or overwritten. A complete run writes `.artifacts/study-report.json` and the reader-oriented `.artifacts/study-report.md`. See [Reproduction](docs/reproduce.md) for commands, the output tree, and troubleshooting.
+The [Cordis paper](https://github.com/cordiverse/paper) supplies the properties. The [locked Cordis formal kit](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal) is the executable specification; the portal does not maintain a competing copy.
 
-## Reading path
+## Read the study
 
-1. Use this README for the outcome and stage relationship.
-2. Read [Research process and results](docs/results.md) for counterexamples, corrections, and evidence limits.
-3. Follow [Reproduction](docs/reproduce.md) to rerun one stage or the full study.
-4. Continue with [Method](docs/method.md) and [Architecture](docs/architecture.md).
-5. Inspect the [authoritative Cordis `formal/` directory](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b/formal) for the TLA+ modules, theorem index, and runner.
+| If you want to… | Open |
+| --- | --- |
+| Understand a concrete failure and its correction | [Results](docs/results.md) |
+| Check current upstream and the migrated fixes | [Upstream alignment](docs/upstream-alignment.md) |
+| Run the checks yourself | [Reproduction](docs/reproduce.md) |
+| Understand models, traces, and applicability | [Method](docs/method.md) |
+| Find revisions, runners, reports, and CI responsibilities | [Architecture](docs/architecture.md) |
 
-## Pinned snapshot and CI
-
-The browsable portal submodules pin the conformance revisions: [Cordis `d06ee04`](https://github.com/Stool233/cordis/tree/d06ee04a4c1c0cdd9605cd3d77521f90220d098b), [English paper `948a07b`](https://github.com/cordiverse/paper/tree/948a07b369c62adb3b12e102458be5c18dfb69b9), and [DeepSeek Harness `4b00212`](https://github.com/Stool233/deepseek-harness/tree/4b00212558e33a0fee5dacb740621db16b1d43dc). [`study.lock.json`](study.lock.json) also pins the other four stage revisions, the paper PDF hash, toolchain, exact expected mismatch names, and evidence scale.
-
-**Integrity** runs on every push and pull request without TLC. **Conformance** runs on relevant pull requests, relevant `main` pushes, or manual dispatch; manual runs select `baseline`, `conformance`, `upstream-fix`, or the default `study`. **Nightly** first reproduces all three stages, then runs layered exhaustive checks and fixed-seed expanded simulations for stage two. **Release** packages evidence only after the three-stage and nightly checks pass.
-
-## Evidence boundary
-
-The conclusions provide conformance evidence for the locked revisions, finite models, explicit premises, and captured traces. Their scope covers modelled state, instrumented implementation actions, and exercised schedules; arbitrary JavaScript plugin side effects and unbounded execution remain outside that scope. Finite traces check observed termination and step bounds without covering infinite-horizon liveness.
+This is early research, not an official Cordis or DeepSeek assurance. Results cover fixed revisions, finite models, declared premises, and observed schedules. Arbitrary plugin side effects and unbounded execution remain outside that scope; the specification and refinement rules still need independent human review.

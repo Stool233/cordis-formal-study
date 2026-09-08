@@ -9,7 +9,9 @@
   },
   "scripts": {
     "verify": "node scripts/study.mjs verify",
-    "test": "node --test test/study.test.mjs",
+    "test": "node --test test/*.test.mjs",
+    "check:upstream:behavior": "node scripts/upstream-behavior.mjs",
+    "reproduce:alignment": "node scripts/reproduce-alignment.mjs",
     "bootstrap:core": "node scripts/study.mjs bootstrap core",
     "bootstrap:full": "node scripts/study.mjs bootstrap full",
     "bootstrap:study": "node scripts/study.mjs bootstrap study",

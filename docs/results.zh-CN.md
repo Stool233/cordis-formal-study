@@ -4,7 +4,7 @@
 
 本文按研究发生的三个阶段解释“发现了什么、如何确认、如何修复，以及哪一份代码适合后续上游评审”。精确 revision 和预期集合以 [`study.lock.json`](../study.lock.json) 为准。
 
-## 阶段总览
+## 先读结论
 
 | 阶段 | 插桩 | 逻辑修复 | 预期结论 |
 | --- | --- | --- | --- |
@@ -12,7 +12,37 @@
 | `conformance` | 有 | 有 | TLC 模型、轨迹 refinement、前提审计、mutations、AgentLoop 和普通回归全部通过。 |
 | `upstream-fix` | 无 | 有 | 只验证逻辑补丁和普通门禁；形式化状态固定为 `not-run`，并指回阶段二。 |
 
-论文固定在 `948a07b369c62adb3b12e102458be5c18dfb69b9`，`paper.pdf` SHA-256 为 `4d48478d…a49db97f`。三阶段使用的六个实现 SHA 见 [README 的阶段表](../README.zh-CN.md#三阶段研究流程)。
+本文描述 [study.lock.json](../study.lock.json) 中的历史实验。论文版本为 `948a07b`，PDF SHA-256 为 `4d48478d…a49db97f`。实现版本见[架构](architecture.zh-CN.md#源码与阶段拓扑)，当前代码的结果见[上游对齐](upstream-alignment.zh-CN.md)。
+
+## 这些失败意味着什么
+
+资源顺序可以直观理解：consumer 先用完资源，再由 provider 释放资源。第一项发现检查的，就是异步清理是否遵守这个顺序。
+
+```mermaid
+flowchart LR
+  A[Consumer 开始清理] --> B[Consumer 完成清理] --> C[Provider 回收资源]
+```
+
+### 1. Provider recovery 与 retirement ordering
+
+原实现可以在异步 consumer teardown 完成前启动 provider accumulator 的 inverse。与此同时，正在退休的 consumer 可能过早离开 runtime list，使并发 teardown 无法继续被 provider 发现。这违反论文所要求的恢复精确性、provider/consumer episode 嵌套顺序，以及 retirement 可见性约束。
+
+修复保留 retiring consumer，直到其生命周期达到 quiescence；provider 在恢复自己的 accumulator 前等待已通知 dependents 退出。`provider-consumer-reverse-exit`、异步与并发 teardown、依赖丢失/恢复和 AgentLoop 装配从同一底层顺序问题的不同路径确认修复。
+
+### 2. Lifecycle、target 与 committed view 的发布顺序
+
+原实现可能先暴露 target 或 committed provider 的变化，之后才完成与之兼容的 lifecycle 转换。相同服务值还可能掩盖 provider identity 已经替换，允许 stale committed binding 在观察状态中短暂存在。这与 Preservation、Resolution coherence，以及 committed lifecycle 的状态不变量冲突。
+
+修复把 lifecycle 转换作为发布屏障：先进入兼容状态，再更新 target 或 committed view；绑定稳定性按 provider identity 而不是仅按值比较。provider replacement、iteration 中依赖丢失、unloading 中依赖恢复、realm 隔离与 confluence 轨迹共同覆盖该行为。
+
+### 3. 传递激活调度回归
+
+普通回归在第一次形式化修复之后发现：连续两个延迟取消检查点会让已等待的 provider 返回时，传递 consumer 仍停留在 `LOADING`。这是一项与进展目标相邻的实现调度问题，但本研究不把它单独宣称为某条论文定理的反例。
+
+修复只保留一个延迟取消检查点。这样 disposal 仍能让 stale activation 失效，而已等待 mount 的调用方会看到传递激活已经结算。对应普通测试在 conformance 和 upstream-fix 阶段都运行。
+
+<details>
+<summary>Baseline 参考：精确轨迹 mismatch 与行为失败清单</summary>
 
 ## 阶段一：在原运行逻辑上复现不一致
 
@@ -45,25 +75,7 @@ vendored Cordis 复现同一组 mismatch，并增加 `deepseek-agent-loop-assemb
 
 vendored 基线此前已有的本地生命周期加固使 `disposal-invalidates-deferred-reload` 通过，因此其行为失败数是 3 而不是 4。9/10 和 4/3 都是场景或检查数量，不代表独立缺陷数量。
 
-## 三项 finding
-
-### 1. Provider recovery 与 retirement ordering
-
-原实现可以在异步 consumer teardown 完成前启动 provider accumulator 的 inverse。与此同时，正在退休的 consumer 可能过早离开 runtime list，使并发 teardown 无法继续被 provider 发现。这违反论文所要求的恢复精确性、provider/consumer episode 嵌套顺序，以及 retirement 可见性约束。
-
-修复保留 retiring consumer，直到其生命周期达到 quiescence；provider 在恢复自己的 accumulator 前等待已通知 dependents 退出。`provider-consumer-reverse-exit`、异步与并发 teardown、依赖丢失/恢复和 AgentLoop 装配从同一底层顺序问题的不同路径确认修复。
-
-### 2. Lifecycle、target 与 committed view 的发布顺序
-
-原实现可能先暴露 target 或 committed provider 的变化，之后才完成与之兼容的 lifecycle 转换。相同服务值还可能掩盖 provider identity 已经替换，允许 stale committed binding 在观察状态中短暂存在。这与 Preservation、Resolution coherence，以及 committed lifecycle 的状态不变量冲突。
-
-修复把 lifecycle 转换作为发布屏障：先进入兼容状态，再更新 target 或 committed view；绑定稳定性按 provider identity 而不是仅按值比较。provider replacement、iteration 中依赖丢失、unloading 中依赖恢复、realm 隔离与 confluence 轨迹共同覆盖该行为。
-
-### 3. 传递激活调度回归
-
-普通回归在第一次形式化修复之后发现：连续两个延迟取消检查点会让已等待的 provider 返回时，传递 consumer 仍停留在 `LOADING`。这是一项与进展目标相邻的实现调度问题，但本研究不把它单独宣称为某条论文定理的反例。
-
-修复只保留一个延迟取消检查点。这样 disposal 仍能让 stale activation 失效，而已等待 mount 的调用方会看到传递激活已经结算。对应普通测试在 conformance 和 upstream-fix 阶段都运行。
+</details>
 
 ## 阶段二：修复后建立一致性证据
 

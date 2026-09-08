@@ -2,16 +2,65 @@
 
 [English](reproduce.md) | 中文
 
-本指南提供三阶段研究的公开接口。若只想理解结果，先阅读[研究过程与结果](results.zh-CN.md)。
+本指南提供当前迁移与原始三阶段研究的复现入口。若只想理解结果，先阅读[研究过程与结果](results.zh-CN.md)。
 
-## 环境与初始化
+## 先选择实验
 
-需要 Node.js 24、Java 21、Git 和 Corepack。首次 bootstrap 会取得六个固定实现 revision 并安装依赖，因此需要网络。场景中的最小 AgentLoop 本身不调用外部模型或网络服务。
+| 目的 | 入口 | 版本依据 |
+| --- | --- | --- |
+| 验证已迁移到当前上游的修复 | `npm run reproduce:alignment` | [alignment.lock.json](../alignment.lock.json) |
+| 重跑原始三阶段研究 | `npm run reproduce:study` | [study.lock.json](../study.lock.json) |
+
+两条路径都需要 Node.js 24、Java 21、Git 和 Corepack。它们检查不同的源码快照与工具哈希，报告分别保存。
+
+## 初始化门户
+
+首次使用时：
 
 ```sh
 git clone https://github.com/Stool233/cordis-formal-study.git
 cd cordis-formal-study
 npm ci
+```
+
+如果已有门户仓库，在其根目录执行 `npm ci`。后续命令也从这里执行。
+
+## 本次迁移
+
+如果两个 fork 尚未存在，将它们 clone 到门户旁边：
+
+```sh
+git clone --branch codex/upstream-alignment-2026-09-09 https://github.com/Stool233/cordis.git ../cordis
+git clone --branch codex/upstream-alignment-2026-09-09 https://github.com/Stool233/deepseek-harness.git ../deepseek-harness
+```
+
+使用精确的候选提交。切换版本前，先保存自己的本地改动：
+
+```sh
+git -C ../cordis checkout --detach 18c327f4566e8f640737c43a480e6d74a0673579
+git -C ../deepseek-harness checkout --detach fdcd1ce36a296ab2288bf407fccba4c8fa634963
+npm run reproduce:alignment -- --cordis ../cordis --deepseek-harness ../deepseek-harness
+```
+
+命令拒绝 dirty 或版本错误的输入。它安装固定依赖，创建独立 worktree，应用经哈希校验的观测补丁，并把历史规格提取到独立运行目录。只有该规格副本使用较新的 TLC 哈希；历史 lock 与源码快照保持不变。
+
+成功要求两份无插桩实现的原始四项行为断言全部通过，PR 模型、29 个 Cordis 观测点、13 条 Cordis 轨迹与 17 条 Harness 轨迹通过，且每份实现的四个 mutation 均被拒绝。原始行为断言保持原样；修复候选的预期失败集合改为空。
+
+最后一行输出 `.artifacts/alignment/run-<id>/evidence/report.json`。报告记录论文、工具、源码版本、源码 tree 与补丁哈希。中断或失败的运行不会产生通过的聚合报告。Worktree 与依赖位于 evidence 目录之外。
+
+仓库测试、build、lint 和文档检查独立于这个形式化命令。命令见 [Cordis fork 指南](https://github.com/Stool233/cordis/blob/main/docs/formal-study.zh-CN.md)和 [Harness fork 指南](https://github.com/Stool233/deepseek-harness/blob/master/docs/cordis-study.zh.md)，实际结果见[上游对齐](upstream-alignment.zh-CN.md)。
+
+## 历史实验：工具可用性
+
+上游替换了原始 TLC 1.8.0 资产。全新运行历史形式化流程，目前会在固定哈希校验处停止。只有匹配原哈希的本地 JAR 才能使用；修改哈希会变成另一组实验。详见[工具对比](upstream-alignment.zh-CN.md#tlc-下载发生了变化)。
+
+下列命令保留原始实验。`reproduce:upstream-fix` 仅运行普通检查，不依赖 TLC。
+
+## 历史实验初始化
+
+首次 bootstrap 会取得六个固定实现 revision 并安装依赖，因此需要网络。场景中的最小 AgentLoop 本身不调用外部模型或网络服务。
+
+```sh
 npm run bootstrap:study
 ```
 
@@ -96,6 +145,9 @@ npm run verify -- --full
 
 `study-report.json` 使用 `cordis.formal-study-report/v1`，用于自动化；`study-report.md` 用双语摘要说明三个阶段的结果。两者都不包含本机绝对路径。
 
+<details>
+<summary>参考：底层 profile、CI 与 Release 打包</summary>
+
 ## 阶段二的低层 profile
 
 为保持已有使用方式，以下命令继续存在：
@@ -115,11 +167,12 @@ npm run verify -- --full
 | Workflow | 触发 | 执行内容 |
 | --- | --- | --- |
 | Integrity | 每次 push 与 PR | `npm ci`、单元测试、lock/gitlink/schema/文档完整性；不执行 TLC。 |
+| Upstream alignment | 相关 PR、`main` 的相关 push、手动 | 按 `alignment.lock.json` 取得候选，执行 `reproduce:alignment` 并发布证据。 |
 | Conformance | 相关 PR、`main` 的相关 push、手动 | PR/push 默认运行 `bootstrap:study` + `reproduce:study`；手动可选四个阶段入口。 |
 | Nightly | 每周一 03:17 UTC、手动 | 完整三阶段，然后 `reproduce:nightly`。 |
 | Release | `v*` tag | 完整三阶段、nightly、完整性检查、证据打包和 GitHub Release。 |
 
-只向 Cordis 或 DeepSeek Harness 的 research 分支 push 不等于触发门户的完整跨仓研究流程。门户 Conformance/Nightly 是主入口。
+只向 Cordis 或 DeepSeek Harness 的 research 分支 push 不等于触发门户的跨仓检查。Upstream alignment 验证当前迁移；Conformance 与 Nightly 复现历史研究，目前会在原 TLC 哈希检查处停止。
 
 ## Release 证据
 
@@ -130,6 +183,8 @@ npm run package -- --version 0.1.0
 ```
 
 生成 `dist/cordis-formal-study-v0.1.0-evidence.tar.gz` 和 `dist/SHA256SUMS`。证据包含 baseline 反例、conformance 模型/轨迹/mutations、upstream-fix 普通门禁、nightly 和聚合报告；不包含 checkouts、依赖、JAR、TLC 临时目录、PDF 或本机路径。
+
+</details>
 
 ## 常见失败
 

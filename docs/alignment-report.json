@@ -1,0 +1,44 @@
+{
+  "schema": "cordis.formal-study-alignment-report/v1",
+  "checkedAt": "2026-09-08T17:11:16.290Z",
+  "status": "pass",
+  "alignmentLockSha256": "7ae22d25fa2cfbe28ffdf6f56ebf6a866ae34c2e3b1142bac72624f816409e8c",
+  "historicalStudyLockSha256": "ae47292df3e156866ba4176a95ffc6c1ccdc0e4b6b3e9102dca9628235d2dfcf",
+  "specificationRevision": "d06ee04a4c1c0cdd9605cd3d77521f90220d098b",
+  "paper": {
+    "repository": "https://github.com/cordiverse/paper",
+    "commit": "948a07b369c62adb3b12e102458be5c18dfb69b9",
+    "pdf": "paper.pdf",
+    "sha256": "4d48478dc0b6222d9f74d7db10ee776449b1209eb112632336544d32a49db97f"
+  },
+  "tlaTools": {
+    "version": "1.8.0",
+    "sha256": "b658b4e504fdf0b721caf7066320f6b6fe5805f4dd2f717d0e47baba4097205e",
+    "assetUrl": "https://github.com/tlaplus/tlaplus/releases/download/v1.8.0/tla2tools.jar"
+  },
+  "latestPaperFormalStatus": "not-validated",
+  "ordinaryRepositoryGates": "not-run-by-this-command",
+  "observations": 29,
+  "behavior": "behavior/report.json",
+  "models": "models/model-report.json",
+  "repositories": {
+    "cordis": {
+      "revision": "18c327f4566e8f640737c43a480e6d74a0673579",
+      "upstreamRevision": "f8ea3cd50f1a5724e8e715995bcde131c9c12b2c",
+      "sourceTree": "0a929b8b6a2373bc9a17d4a4515c4f7c90b8abcf",
+      "instrumentationSha256": "82a40d346c0cba89820538c0ba951b50effdbd876d493ed758e6633e90efdc5f",
+      "scenarios": 13,
+      "mutations": 4,
+      "report": "cordis/conformance-report.json"
+    },
+    "deepseekHarness": {
+      "revision": "fdcd1ce36a296ab2288bf407fccba4c8fa634963",
+      "upstreamRevision": "5dda764ed3aa172535a7967b06ff95d9cbfe536a",
+      "sourceTree": "76d97c03abdc8ae396a382487baa70591c6890dd",
+      "instrumentationSha256": "0a5457c7007687810a1eb3a237fc8d5af0fed026fd79846554b47a6413cad41f",
+      "scenarios": 17,
+      "mutations": 4,
+      "report": "deepseekHarness/conformance-report.json"
+    }
+  }
+}

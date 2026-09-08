@@ -4,7 +4,7 @@ English | [中文](results.zh-CN.md)
 
 This document follows the three stages of the study to explain what was found, how it was confirmed, how it was corrected, and which source is suitable for later upstream review. [`study.lock.json`](../study.lock.json) is authoritative for exact revisions and expected sets.
 
-## Stage overview
+## Read the result first
 
 | Stage | Instrumentation | Logic fixes | Expected conclusion |
 | --- | --- | --- | --- |
@@ -12,7 +12,37 @@ This document follows the three stages of the study to explain what was found, h
 | `conformance` | Present | Present | TLC models, trace refinement, premise audits, mutations, AgentLoop, and ordinary regressions all pass. |
 | `upstream-fix` | Absent | Present | Only the logic patch and ordinary gates are checked; formal status is fixed to `not-run` and points back to stage two. |
 
-The paper is pinned at `948a07b369c62adb3b12e102458be5c18dfb69b9`, with `paper.pdf` SHA-256 `4d48478d…a49db97f`. The six implementation SHAs are listed in the [README stage table](../README.md#three-stage-research-process).
+This page describes the historical experiment in [study.lock.json](../study.lock.json). The paper revision is `948a07b`, with PDF SHA-256 `4d48478d…a49db97f`. See [Architecture](architecture.md#source-and-stage-topology) for implementation revisions, or [Upstream alignment](upstream-alignment.md) for current-code results.
+
+## What the failures mean
+
+The required resource order is easy to recognize: a consumer finishes using a resource before its provider releases it. The first finding checks that order across asynchronous cleanup.
+
+```mermaid
+flowchart LR
+  A[Consumer cleanup starts] --> B[Consumer cleanup finishes] --> C[Provider resource recovery]
+```
+
+### 1. Provider recovery and retirement ordering
+
+The original implementation could start a provider accumulator's inverse before asynchronous consumer teardown finished. At the same time, a retiring consumer could leave the runtime list too early, preventing concurrent teardown from continuing to discover it. This conflicts with the paper's recovery exactness, provider/consumer episode nesting, and retirement visibility requirements.
+
+The correction keeps retiring consumers discoverable until lifecycle quiescence and makes provider recovery await notified dependents. Provider/consumer reverse exit, asynchronous and concurrent teardown, dependency loss and return, and AgentLoop assembly confirm the same underlying ordering issue through different paths.
+
+### 2. Publication ordering for lifecycle, target, and committed view
+
+The original implementation could expose a target or committed-provider change before entering a compatible lifecycle state. Equal service values could also hide a provider-identity replacement, briefly exposing a stale committed binding. This conflicts with Preservation, Resolution coherence, and committed-lifecycle state invariants.
+
+The correction uses lifecycle transition as a publication barrier: enter the compatible lifecycle state before changing target or committed view, and compare bindings by provider identity rather than value alone. Provider replacement, dependency loss during iteration, dependency return during unload, realm isolation, and confluence traces jointly cover this behavior.
+
+### 3. Transitive activation scheduling regression
+
+Ordinary regression testing after the first formal correction found that two consecutive deferred cancellation checkpoints could let an awaited provider return while a transitive consumer remained `LOADING`. This is an implementation scheduling issue adjacent to the progress goal; the study does not claim it as a standalone counterexample to a specific paper theorem.
+
+The correction keeps one deferred cancellation checkpoint. Disposal can still invalidate stale activation, while callers awaiting mount observe settled transitive activation. The ordinary regression runs in both conformance and upstream-fix stages.
+
+<details>
+<summary>Baseline reference: exact trace mismatches and behavior failures</summary>
 
 ## Stage one: reproduce divergence with original runtime logic
 
@@ -45,25 +75,7 @@ Vendored Cordis reproduces the same set plus `deepseek-agent-loop-assembly`, for
 
 Existing vendored lifecycle hardening already makes `disposal-invalidates-deferred-reload` pass, so its behavior-failure count is 3 rather than 4. The 9/10 and 4/3 figures count affected scenarios or checks, not independent defects.
 
-## Three findings
-
-### 1. Provider recovery and retirement ordering
-
-The original implementation could start a provider accumulator's inverse before asynchronous consumer teardown finished. At the same time, a retiring consumer could leave the runtime list too early, preventing concurrent teardown from continuing to discover it. This conflicts with the paper's recovery exactness, provider/consumer episode nesting, and retirement visibility requirements.
-
-The correction keeps retiring consumers discoverable until lifecycle quiescence and makes provider recovery await notified dependents. Provider/consumer reverse exit, asynchronous and concurrent teardown, dependency loss and return, and AgentLoop assembly confirm the same underlying ordering issue through different paths.
-
-### 2. Publication ordering for lifecycle, target, and committed view
-
-The original implementation could expose a target or committed-provider change before entering a compatible lifecycle state. Equal service values could also hide a provider-identity replacement, briefly exposing a stale committed binding. This conflicts with Preservation, Resolution coherence, and committed-lifecycle state invariants.
-
-The correction uses lifecycle transition as a publication barrier: enter the compatible lifecycle state before changing target or committed view, and compare bindings by provider identity rather than value alone. Provider replacement, dependency loss during iteration, dependency return during unload, realm isolation, and confluence traces jointly cover this behavior.
-
-### 3. Transitive activation scheduling regression
-
-Ordinary regression testing after the first formal correction found that two consecutive deferred cancellation checkpoints could let an awaited provider return while a transitive consumer remained `LOADING`. This is an implementation scheduling issue adjacent to the progress goal; the study does not claim it as a standalone counterexample to a specific paper theorem.
-
-The correction keeps one deferred cancellation checkpoint. Disposal can still invalidate stale activation, while callers awaiting mount observe settled transitive activation. The ordinary regression runs in both conformance and upstream-fix stages.
+</details>
 
 ## Stage two: establish conformance evidence after correction
 
