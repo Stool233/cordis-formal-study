@@ -23,7 +23,9 @@ Cordis 插件的生命周期行为，是否与论文描述一致？本研究把�
 
 2026-09-09 的检查取得官方 Cordis `f8ea3cd` 与 Harness `5dda764`。两个 fork 各自建立了基于这些版本的迁移分支，修复与验证记录见[上游对齐](docs/upstream-alignment.zh-CN.md)。
 
-原始三阶段快照保持不变。官方 TLC 1.8.0 下载内容的哈希已不同于历史 lock，因此全新运行原始形式化流程会在哈希校验处停止。本次迁移显式记录较新的工具，仍使用历史规格。[arXiv v1 审阅](docs/arxiv-review.zh-CN.md)已完成结论与前提对齐：保留 cleanup 修复，收窄发布、恢复与合流主张；完整 arXiv 形式化验证仍标记为 `not-validated`。
+原始三阶段快照保持不变。TLC 1.8.0 下载内容再次变化，现已同时不同于历史锁与迁移锁，全新下载会在哈希校验处停止，见 [CI 后续核对](docs/upstream-alignment.zh-CN.md#论文审阅后的-ci-核对)。已记录的迁移实验使用显式固定的较新工具与历史规格。
+
+[arXiv v1 审阅](docs/arxiv-review.zh-CN.md)已完成结论与前提对齐：保留 cleanup 修复，收窄发布、恢复与合流主张；完整 arXiv 形式化验证仍标记为 `not-validated`。
 
 ## 三个阶段，三种成功含义
 

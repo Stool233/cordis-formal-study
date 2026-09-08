@@ -4,6 +4,8 @@ English | [中文](upstream-alignment.zh-CN.md)
 
 The lifecycle fixes have been migrated to official Cordis `f8ea3cd` and Harness `5dda764`, and the current candidates pass the shared historical specification. The original three-stage snapshots remain unchanged.
 
+The recorded passes below precede another replacement of the TLC release asset. The [CI follow-up](#ci-follow-up-after-the-paper-review) now blocks fresh formal runs against both locks; the paper-review commit's Integrity check passes.
+
 ## Migration results
 
 | Check | Cordis | DeepSeek Harness |
@@ -63,11 +65,11 @@ The behavior findings remain premature provider recovery, premature disappearanc
 
 ## Changed TLC release asset
 
-The official [`v1.8.0` release metadata](https://api.github.com/repos/tlaplus/tlaplus/releases/tags/v1.8.0) records `tla2tools.jar` as updated on `2026-09-04T17:12:07Z`. Its downloaded SHA-256 agrees with the current GitHub asset digest but differs from the study pin:
+At the initial comparison, the official [`v1.8.0` release metadata](https://api.github.com/repos/tlaplus/tlaplus/releases/tags/v1.8.0) recorded `tla2tools.jar` as updated on `2026-09-04T17:12:07Z`. Its downloaded SHA-256 agreed with the then-current GitHub asset digest but differed from the study pin:
 
 ```text
-locked:   ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f
-current:  b658b4e504fdf0b721caf7066320f6b6fe5805f4dd2f717d0e47baba4097205e
+historical: ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f
+migration:  b658b4e504fdf0b721caf7066320f6b6fe5805f4dd2f717d0e47baba4097205e
 ```
 
 CommunityModules still matches its pinned hash. Other local TLC copies did not match the original pin. The original runner correctly rejected the changed download.
@@ -75,6 +77,18 @@ CommunityModules still matches its pinned hash. Other local TLC copies did not m
 Diagnostics used specification copies under `.artifacts/upstream/toolchain-diagnostic/`, updating only the TLC hash in the runner and provenance. Models, scenarios, and expected assertions were retained. Outputs are separate from historical stage evidence: **these are diagnostics with a different toolchain, not successful reproduction of the original lock**.
 
 This machine uses a separately downloaded, SHA-256-verified Temurin 21 under `.artifacts/toolchains/`; add its `Contents/Home/bin` to `PATH` before TLC runs. Historical reproduction additionally requires a JAR matching the original hash.
+
+### CI follow-up after the paper review
+
+Commit `dc6d4db` passed [Integrity](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588196). [Upstream alignment](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588233) passed all original behavior assertions and the 29-point observation audit, then stopped before model execution at the TLC download checksum. [Historical Conformance](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588132) stopped at the same download check against its different pin.
+
+The official asset now records `updated_at: 2026-09-08T17:57:45Z`. A fresh local download matches both its GitHub digest and the new CI observation:
+
+```text
+4c7bb1f6b050d56c197ee9ddd6e57fe521eae175f5043c9fb98b169f7b2d5407
+```
+
+This is a third artifact, not either locked JAR. The earlier [successful migration run](https://github.com/Stool233/cordis-formal-study/actions/runs/34257716674) remains evidence for its recorded toolchain. Neither lock nor its passing aggregate was rewritten. Reproduction requires the matching artifact, or an explicitly recorded and separately validated toolchain migration; repeating a fresh download cannot resolve this mismatch.
 
 ## Paper cross-reference
 

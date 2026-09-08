@@ -31,6 +31,31 @@
     "modelMigration": "not-performed",
     "historicalEvidence": "unchanged"
   },
+  "ciFollowup": {
+    "commit": "dc6d4dbd1c9689904a3f182a243db21850bbd2b9",
+    "integrity": {
+      "status": "pass",
+      "url": "https://github.com/Stool233/cordis-formal-study/actions/runs/34263588196"
+    },
+    "upstreamAlignment": {
+      "status": "blocked-tlc-download-sha256",
+      "url": "https://github.com/Stool233/cordis-formal-study/actions/runs/34263588233",
+      "behaviorAssertions": "all-four-pass-in-each-implementation",
+      "observationPoints": 29,
+      "modelExecution": "not-started"
+    },
+    "historicalConformance": {
+      "status": "blocked-tlc-download-sha256",
+      "url": "https://github.com/Stool233/cordis-formal-study/actions/runs/34263588132"
+    },
+    "observedTlaTools": {
+      "sha256": "4c7bb1f6b050d56c197ee9ddd6e57fe521eae175f5043c9fb98b169f7b2d5407",
+      "assetUpdatedAt": "2026-09-08T17:57:45Z",
+      "matchesGitHubDigest": true,
+      "matchesFreshLocalDownload": true,
+      "matchesEitherLock": false
+    }
+  },
   "implementations": {
     "cordis": {
       "upstream": "https://github.com/cordiverse/cordis.git",

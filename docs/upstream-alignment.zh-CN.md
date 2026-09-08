@@ -4,6 +4,8 @@
 
 生命周期修复已迁移到官方 Cordis `f8ea3cd` 与 Harness `5dda764`，新版候选通过了共用的历史规格检查。原始三阶段快照保持不变。
 
+下文记录的通过发生在 TLC 资产再次被替换之前。[CI 后续核对](#论文审阅后的-ci-核对)显示两份锁的全新形式化运行现均受阻；论文审阅提交的 Integrity 通过。
+
 ## 迁移验证结果
 
 | 检查 | Cordis | DeepSeek Harness |
@@ -63,18 +65,30 @@ Harness 的 JSONL 测试首次运行缺少当前版本要求的原生 POSIX 锁�
 
 ## TLC 下载发生了变化
 
-TLA+ 官方 [`v1.8.0` release 元数据](https://api.github.com/repos/tlaplus/tlaplus/releases/tags/v1.8.0)显示，`tla2tools.jar` 资产更新时间为 `2026-09-04T17:12:07Z`。当前下载内容的 SHA-256 与研究 lock 不同：
+首次对比时，TLA+ 官方 [`v1.8.0` release 元数据](https://api.github.com/repos/tlaplus/tlaplus/releases/tags/v1.8.0)显示，`tla2tools.jar` 资产更新时间为 `2026-09-04T17:12:07Z`。当时下载内容的 SHA-256 与研究 lock 不同：
 
 ```text
-研究锁定：ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f
-当前官方：b658b4e504fdf0b721caf7066320f6b6fe5805f4dd2f717d0e47baba4097205e
+历史锁定：ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f
+迁移锁定：b658b4e504fdf0b721caf7066320f6b6fe5805f4dd2f717d0e47baba4097205e
 ```
 
-当前哈希经实际下载与 GitHub 资产 digest 双重核对。CommunityModules 的固定哈希仍一致。本机找到的其他 TLC 文件均不匹配原始哈希。
+该次哈希经实际下载与当时的 GitHub 资产 digest 双重核对。CommunityModules 的固定哈希仍一致。本机找到的其他 TLC 文件均不匹配原始哈希。
 
 原 runner 正确拒绝了新文件。未修改上游的对照检查使用 `.artifacts/upstream/toolchain-diagnostic/` 中的规格副本，只更新 runner 和 provenance 的工具哈希；TLA+ 模型、场景与期望断言保持不变，输出也与历史三阶段目录隔离。因此这些结果是**新版工具链上的诊断证据**，不能冒充原 lock 的成功复现。
 
 本机使用独立安装并校验 SHA-256 的 Temurin 21，位于 `.artifacts/toolchains/`。运行 TLC 前，将其 `Contents/Home/bin` 加入 `PATH`；这也适用于后续提供原始哈希 JAR 后的历史复现。
+
+### 论文审阅后的 CI 核对
+
+提交 `dc6d4db` 的 [Integrity](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588196)通过。[Upstream alignment](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588233)通过原始行为断言与 29 点观测审计，随后在 TLC 下载哈希校验处停止，尚未执行模型。[历史 Conformance](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588132)也在同一下载检查处受阻，其预期哈希不同。
+
+官方资产现记录 `updated_at: 2026-09-08T17:57:45Z`。本地重新下载的哈希与 GitHub digest、本次 CI 观测一致：
+
+```text
+4c7bb1f6b050d56c197ee9ddd6e57fe521eae175f5043c9fb98b169f7b2d5407
+```
+
+这是第三份资产，不匹配任何一份锁定 JAR。此前[迁移成功的运行](https://github.com/Stool233/cordis-formal-study/actions/runs/34257716674)仍是其记录工具链的证据。两份锁与通过的聚合报告均未改写。复现需要取得对应资产，或显式记录并单独验证一次工具链迁移；重复全新下载不能消除这个 mismatch。
 
 ## 论文对应关系
 
