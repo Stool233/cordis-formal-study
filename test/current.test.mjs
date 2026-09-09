@@ -31,6 +31,7 @@ test('report validation binds all six results to the exact paper, source, checke
   const report = {
     schema: 'cordis.current-verification/v1', status: 'pass',
     evidenceKind: 'implementation-behavior-regression', paperTheorems: 'not-proved-by-these-checks',
+    runtime: { node: '24.14.0', platform: 'darwin', architecture: 'arm64' },
     lockSha256: await fileDigest(join(root, 'current.lock.json')),
     paper: lock.paper, checkerSha256: await checkerDigests(),
     repositories: Object.fromEntries(Object.entries(lock.repositories).map(([key, value]) => [key, {
@@ -46,6 +47,7 @@ test('report validation binds all six results to the exact paper, source, checke
     value => { value.checkerSha256['package-lock.json'] = 'f'.repeat(64) },
     value => { value.lockSha256 = 'f'.repeat(64) },
     value => { value.paperTheorems = 'proved' },
+    value => { value.runtime.node = '22.22.0' },
   ]) {
     const changed = structuredClone(report)
     alter(changed)

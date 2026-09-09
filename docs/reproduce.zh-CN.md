@@ -34,7 +34,7 @@ npm run check:current -- --output .artifacts/current/local
 npm run verify -- --report .artifacts/current/local/report.json
 ```
 
-聚合报告只在两端全部通过后生成；失败运行不会沿用该目录中的旧聚合报告。报告列出论文、源码提交及 tree、检查器与依赖锁哈希、各项结果。仓库保留的[确认报告](verification-report.json)使用相同格式。
+聚合报告只在两端全部通过后生成；失败运行不会沿用该目录中的旧聚合报告。报告列出论文、Node 版本和运行平台、源码提交及 tree、检查器与依赖锁哈希、各项结果。仓库保留的[确认报告](verification-report.json)使用相同格式。
 
 `npm test`检查锁与报告验证器的拒绝路径；`npm run verify`检查文档、版本锁和已记录报告。CI 还会重新执行真实实现检查，见[验证说明](verification.zh-CN.md)。
 

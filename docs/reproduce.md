@@ -34,7 +34,7 @@ npm run check:current -- --output .artifacts/current/local
 npm run verify -- --report .artifacts/current/local/report.json
 ```
 
-The aggregate is generated only when both implementations pass. A failed run does not reuse that directory's old aggregate. Reports list the paper, source commits and trees, checker and dependency-lock hashes, and individual results. The repository's [confirmed report](verification-report.json) uses the same format.
+The aggregate is generated only when both implementations pass. A failed run does not reuse that directory's old aggregate. Reports list the paper, Node version and platform, source commits and trees, checker and dependency-lock hashes, and individual results. The repository's [confirmed report](verification-report.json) uses the same format.
 
 `npm test` checks lock and report rejection paths; `npm run verify` checks documentation, pins, and recorded evidence. CI also reruns the real implementation checks; see [Verification](verification.md).
 

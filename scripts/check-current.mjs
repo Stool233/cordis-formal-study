@@ -36,6 +36,7 @@ async function main() {
     console.log('Checks the exact commits in current.lock.json. Optional local repositories supply Git objects; their working trees are not executed or changed.')
     return
   }
+  assert.equal(process.versions.node.split('.')[0], '24', 'Run the current checks with Node.js 24')
   for (let index = 0; index < args.length; index += 2) {
     assert.ok(['--cordis', '--deepseek-harness', '--output'].includes(args[index]), `unknown option: ${args[index]}`)
     option(args[index])
@@ -84,6 +85,7 @@ async function main() {
       status: 'pass',
       evidenceKind: 'implementation-behavior-regression',
       paperTheorems: 'not-proved-by-these-checks',
+      runtime: { node: process.versions.node, platform: process.platform, architecture: process.arch },
       lockSha256: await fileDigest(join(root, 'current.lock.json')),
       paper: lock.paper,
       checkerSha256: await checkerDigests(),
