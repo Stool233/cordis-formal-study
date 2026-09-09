@@ -1,0 +1,35 @@
+name: Current verification
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  current:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - run: npm ci
+      - run: npm test
+      - run: npm run verify
+      - run: npm run check:current -- --output .artifacts/current/ci
+      - run: npm run verify -- --report .artifacts/current/ci/report.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: current-verification
+          path: .artifacts/current/ci/*.json
+          if-no-files-found: warn
+          include-hidden-files: true

@@ -8,21 +8,14 @@
     "node": ">=24"
   },
   "scripts": {
-    "verify": "node scripts/study.mjs verify",
     "test": "node --test test/*.test.mjs",
-    "test:tools": "node --test test/toolchain-offline.integration.mjs",
-    "check:upstream:behavior": "node scripts/upstream-behavior.mjs",
-    "reproduce:alignment": "node scripts/reproduce-alignment.mjs",
-    "bootstrap:core": "node scripts/study.mjs bootstrap core",
-    "bootstrap:full": "node scripts/study.mjs bootstrap full",
-    "bootstrap:study": "node scripts/study.mjs bootstrap study",
-    "reproduce:baseline": "node scripts/study.mjs reproduce baseline",
-    "reproduce:conformance": "node scripts/study.mjs reproduce conformance",
-    "reproduce:upstream-fix": "node scripts/study.mjs reproduce upstream-fix",
-    "reproduce:study": "node scripts/study.mjs reproduce study",
-    "reproduce:core": "node scripts/study.mjs reproduce core",
-    "reproduce:full": "node scripts/study.mjs reproduce full",
-    "reproduce:nightly": "node scripts/study.mjs reproduce nightly",
-    "package": "node scripts/study.mjs package"
-  }
+    "verify": "node scripts/verify.mjs",
+    "check:current": "node scripts/check-current.mjs"
+  },
+  "devDependencies": {
+    "@standard-schema/spec": "1.1.0",
+    "cosmokit": "1.8.1",
+    "tsx": "4.23.13"
+  },
+  "description": "Current Cordis paper reading and focused implementation verification"
 }

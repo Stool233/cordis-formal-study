@@ -1,9 +1,9 @@
 cff-version: 1.2.0
 message: "If you use this research portal or its evidence, please cite it as follows."
-title: "Cordis Formal Study: TLA+ Models and Trace Conformance Evidence"
+title: "Cordis Study: Current Paper and Implementation Checks"
 type: software
 version: 0.1.0
-date-released: 2026-08-16
+date-released: 2026-09-10
 authors:
   - family-names: Weng
     given-names: Jialin

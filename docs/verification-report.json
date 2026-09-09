@@ -1,0 +1,66 @@
+{
+  "schema": "cordis.current-verification/v1",
+  "checkedAt": "2026-09-09T16:57:24.181Z",
+  "status": "pass",
+  "evidenceKind": "implementation-behavior-regression",
+  "paperTheorems": "not-proved-by-these-checks",
+  "lockSha256": "4993eea31ef073824b2f40283ba7b52814114323e4aa0ab19551153744279bbc",
+  "paper": {
+    "version": "arXiv:2608.25512v1",
+    "title": "A Programming Paradigm for Spatiotemporal Composability",
+    "url": "https://arxiv.org/abs/2608.25512v1",
+    "sha256": "390775dbc9debdcf2ed1b076eed013387ca057630be3cb594617b2b742e48cf0",
+    "reviewedOn": "2026-09-09",
+    "versionCheckedOn": "2026-09-10"
+  },
+  "checkerSha256": {
+    "checks/lifecycle.mjs": "eca9c2aa2f091d44867ea48c58d599730ce74264c7622a51fe0cbc3e158213b3",
+    "checks/run.mjs": "aebce42e57f680c1fe85d057bc1bfb5616dc98746ba868cfd3a776cba4e5d54b",
+    "scripts/check-current.mjs": "c3a0f0717134d7dc97b3690fd1988552de2b4ab46bcc4639445806c6a430d221",
+    "scripts/lib/current.mjs": "43e3cc6a2dd6ee0000ca7e54dcb33792b389a03e8079d425f6265a5dbeb352b5",
+    "package-lock.json": "c067dd411bc3849c3dc2049a055b8834f425ed09baae74b4c4c0299fec45da77"
+  },
+  "repositories": {
+    "cordis": {
+      "revision": "18c327f4566e8f640737c43a480e6d74a0673579",
+      "sourceTrees": {
+        "packages/core/src": "0a929b8b6a2373bc9a17d4a4515c4f7c90b8abcf"
+      },
+      "results": [
+        {
+          "id": "dependent-cleanup-before-provider-release",
+          "status": "pass"
+        },
+        {
+          "id": "retiring-dependent-remains-discoverable",
+          "status": "pass"
+        },
+        {
+          "id": "replacement-provider-has-distinct-identity",
+          "status": "pass"
+        }
+      ]
+    },
+    "deepseekHarness": {
+      "revision": "fdcd1ce36a296ab2288bf407fccba4c8fa634963",
+      "sourceTrees": {
+        "vendor/cordis/src": "76d97c03abdc8ae396a382487baa70591c6890dd",
+        "vendor/cosmokit/src": "26889adf672790fd83a06ea371628270dbd05c46"
+      },
+      "results": [
+        {
+          "id": "dependent-cleanup-before-provider-release",
+          "status": "pass"
+        },
+        {
+          "id": "retiring-dependent-remains-discoverable",
+          "status": "pass"
+        },
+        {
+          "id": "replacement-provider-has-distinct-identity",
+          "status": "pass"
+        }
+      ]
+    }
+  }
+}

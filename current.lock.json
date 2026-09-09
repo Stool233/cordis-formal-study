@@ -1,0 +1,43 @@
+{
+  "schema": "cordis.current-study/v1",
+  "paper": {
+    "version": "arXiv:2608.25512v1",
+    "title": "A Programming Paradigm for Spatiotemporal Composability",
+    "url": "https://arxiv.org/abs/2608.25512v1",
+    "sha256": "390775dbc9debdcf2ed1b076eed013387ca057630be3cb594617b2b742e48cf0",
+    "reviewedOn": "2026-09-09",
+    "versionCheckedOn": "2026-09-10"
+  },
+  "checks": [
+    "dependent-cleanup-before-provider-release",
+    "retiring-dependent-remains-discoverable",
+    "replacement-provider-has-distinct-identity"
+  ],
+  "repositories": {
+    "cordis": {
+      "source": "https://github.com/Stool233/cordis.git",
+      "revision": "18c327f4566e8f640737c43a480e6d74a0673579",
+      "upstream": "https://github.com/cordiverse/cordis.git",
+      "upstreamRevision": "f8ea3cd50f1a5724e8e715995bcde131c9c12b2c",
+      "entry": "packages/core/src/index.ts",
+      "sourceTrees": {
+        "packages/core/src": "0a929b8b6a2373bc9a17d4a4515c4f7c90b8abcf"
+      }
+    },
+    "deepseekHarness": {
+      "source": "https://github.com/Stool233/deepseek-harness.git",
+      "revision": "fdcd1ce36a296ab2288bf407fccba4c8fa634963",
+      "upstream": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "upstreamRevision": "5dda764ed3aa172535a7967b06ff95d9cbfe536a",
+      "entry": "vendor/cordis/src/index.ts",
+      "sourceTrees": {
+        "vendor/cordis/src": "76d97c03abdc8ae396a382487baa70591c6890dd",
+        "vendor/cosmokit/src": "26889adf672790fd83a06ea371628270dbd05c46"
+      }
+    }
+  },
+  "archive": {
+    "tag": "archive/three-stage-study-2026-09-09",
+    "revision": "1d6eacf7a87edd5de0774d6fc927dd0e1901ddca"
+  }
+}
