@@ -2,7 +2,7 @@
 
 [English](verification.md) | 中文
 
-两端各运行以下三项直接行为检查，全部通过。[生成的报告](verification-report.json)记录了精确源码、检查器和依赖锁。论文依据见[论文阅读](paper.zh-CN.md)。
+两端各运行以下三项直接行为检查，全部通过。[生成的报告](verification-report.json)取自[已通过的 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34381782064)，记录精确源码、检查器、运行时和依赖锁。论文依据见[论文阅读](paper.zh-CN.md)。
 
 ## 检查具体断言什么
 

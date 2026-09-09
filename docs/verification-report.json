@@ -1,13 +1,13 @@
 {
   "schema": "cordis.current-verification/v1",
-  "checkedAt": "2026-09-09T17:14:25.325Z",
+  "checkedAt": "2026-09-09T17:15:40.899Z",
   "status": "pass",
   "evidenceKind": "implementation-behavior-regression",
   "paperTheorems": "not-proved-by-these-checks",
   "runtime": {
-    "node": "24.14.0",
-    "platform": "darwin",
-    "architecture": "arm64"
+    "node": "24.20.0",
+    "platform": "linux",
+    "architecture": "x64"
   },
   "lockSha256": "4993eea31ef073824b2f40283ba7b52814114323e4aa0ab19551153744279bbc",
   "paper": {

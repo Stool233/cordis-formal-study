@@ -2,7 +2,7 @@
 
 English | [中文](verification.zh-CN.md)
 
-Each implementation runs the three direct behavior checks below, and all pass. The [generated report](verification-report.json) records the exact source, checker, and dependency lock. [Paper reading](paper.md) provides their paper basis.
+Each implementation runs the three direct behavior checks below, and all pass. The [generated report](verification-report.json) is preserved from a [successful CI run](https://github.com/Stool233/cordis-formal-study/actions/runs/34381782064) and records the exact source, checker, runtime, and dependency lock. [Paper reading](paper.md) provides their paper basis.
 
 ## What each check asserts
 
