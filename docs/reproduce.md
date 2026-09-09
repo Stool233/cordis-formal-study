@@ -1,45 +1,45 @@
-# Run the current checks
+# Reproduce the contributions
 
 English | [中文](reproduce.zh-CN.md)
 
-You need Node.js 24, npm, Git, and tar. The first run needs access to npm and the two fork repositories. No model API key, Corepack, Java, or TLC is required.
+Use Node.js 24 and Java 21. TLC and Community Modules are bundled; no model API key or tool download is needed. Install npm dependencies once at the repository root.
 
-## Start from a clean checkout
-
-Run these commands at the repository root:
+## Replay the selected TLC evidence
 
 ```sh
 npm ci
 npm test
 npm run verify
-npm run check:current
+npm run check:contributions -- --output .artifacts/contributions/local
 ```
 
-The last command fetches the commits in [the lock](../current.lock.json), exports the selected source, and executes the same checks against both implementations. Successful output includes `Current verification: 6 / 6 passed` and the report path.
+The result must be **6 before traces rejected, 6 fixed traces accepted, and 2 negative controls rejected**. Each real capture runs through the original trace checker and the focused unload guard. Inspect `report.json`, `tlc.log`, and `counterexample.json` under the chosen output directory. Any unexpected result fails the command and leaves no successful aggregate.
 
-## Use existing local Git repositories
+This command rechecks committed implementation observations; it does not regenerate them. The [contribution lock](../contributions.lock.json) records source commits, trace digests, model digests, and tool versions.
+
+## Regenerate fixed traces from source
+
+Use clean checkouts at Cordis `18c327f4566e8f640737c43a480e6d74a0673579` and Harness `fdcd1ce36a296ab2288bf407fccba4c8fa634963`. Both repositories must include the historical Git objects used by the observation kit. Use separate worktrees if your normal checkouts contain work. Enable Corepack, then run:
 
 ```sh
-npm run check:current -- --cordis ../cordis --deepseek-harness ../deepseek-harness
+git submodule update --init --recursive
+npm run test:tools
+npm run reproduce:alignment -- --cordis /path/to/fixed-cordis --deepseek-harness /path/to/fixed-harness
 ```
 
-These paths supply Git objects for the locked commits. The command neither executes nor modifies their working trees, and their checked-out branches need not be the research branches. If a repository lacks the commit, fetch it first or omit the path to let the command fetch automatically.
+This installs locked dependencies, applies pinned observer patches in isolated worktrees, regenerates traces, and executes the kit's checks. The final contribution check requires the six selected fixed traces to match the committed evidence and reruns TLC. Results appear under `.artifacts/alignment/run-*/evidence/`, with a nested `contributions/report.json`. The [alignment workflow](../.github/workflows/upstream-alignment.yml) automates these checkout and toolchain steps.
 
-## Inspect the report
+[study.lock.json](../study.lock.json) fixes the observation kit and its prerequisites; [alignment.lock.json](../alignment.lock.json) fixes the current candidate sources and adapter patches. Their historical model names are internal reproduction inputs, not a catalog of current paper proofs. The complete original pre-fix capture procedure remains recoverable in the [archive](../archive/README.md).
 
-Choose an output directory and validate the newly generated report:
+## Run supporting behavior checks
 
 ```sh
 npm run check:current -- --output .artifacts/current/local
 npm run verify -- --report .artifacts/current/local/report.json
 ```
 
-The aggregate is generated only when both implementations pass. A failed run does not reuse that directory's old aggregate. Reports list the paper, Node version and platform, source commits and trees, checker and dependency-lock hashes, and individual results. The repository's [confirmed report](verification-report.json) uses the same format.
+The command fetches the pinned Git objects and exports source into a temporary directory. Optional `--cordis ../cordis --deepseek-harness ../deepseek-harness` arguments reuse local objects without executing or changing those working trees. All six supporting regressions must pass.
 
-`npm test` checks lock and report rejection paths; `npm run verify` checks documentation, pins, and recorded evidence. CI also reruns the real implementation checks; see [Verification](verification.md).
+## Update versions deliberately
 
-## Update the research subjects
-
-When changing paper or source versions, update the lock and reading notes, review the relevant rules and implementation, rerun the checks, and refresh the confirmed report. A pass applies only to its recorded inputs and versions.
-
-The earlier study has a separate [archive entry](../archive/README.md).
+Review a new paper or implementation version before changing the locks. Regenerate both sides of the relevant defect evidence, inspect the actual failing recovery step, rerun the fixed-source checks and negative controls, then refresh the captures and reports. Do not convert an unrelated mismatch into a confirmed contribution or silently accept changed tool bytes.

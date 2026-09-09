@@ -10,12 +10,15 @@
   "scripts": {
     "test": "node --test test/*.test.mjs",
     "verify": "node scripts/verify.mjs",
-    "check:current": "node scripts/check-current.mjs"
+    "check:current": "node scripts/check-current.mjs",
+    "test:tools": "node --test test/toolchain-offline.integration.mjs",
+    "check:contributions": "node scripts/check-contributions.mjs",
+    "reproduce:alignment": "node scripts/reproduce-alignment.mjs"
   },
   "devDependencies": {
     "@standard-schema/spec": "1.1.0",
     "cosmokit": "1.8.1",
     "tsx": "4.23.13"
   },
-  "description": "Current Cordis paper reading and focused implementation verification"
+  "description": "TLC-discovered Cordis lifecycle defects, fixes, and current implementation verification"
 }

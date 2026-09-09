@@ -25,3 +25,5 @@ These correspondences are grounded in the [paper](https://arxiv.org/pdf/2608.255
 Locate the checked source through [Implementation](implementation.md), then read the inputs, observation points, and assertions in [Verification](verification.md). Cleanup order applies along established dependency bindings; it does not directly generalize to arbitrary parent-child relationships or undeclared external effects.
 
 This project confirms the correspondence between these rules and concrete regression scenarios. Passing behavior tests cover the pinned implementations and given scenarios; a formal proof of the full calculus is outside this check set.
+
+The [confirmed contribution set](contributions.md) concerns the two cleanup defects. Provider identity is reading context and a supporting regression, not an additional defect discovery.

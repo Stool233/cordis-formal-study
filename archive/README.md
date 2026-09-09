@@ -13,6 +13,6 @@ The snapshot includes earlier claims and their review corrections, historical an
 | Historical reproduction and tools | [Reproduction](https://github.com/Stool233/cordis-formal-study/blob/1d6eacf7a87edd5de0774d6fc927dd0e1901ddca/docs/reproduce.md) |
 | Confirmed historical CI | [Validation record](https://github.com/Stool233/cordis-formal-study/blob/1d6eacf7a87edd5de0774d6fc927dd0e1901ddca/docs/upstream-alignment.md) |
 
-These materials support traceability. The [current lock](../current.lock.json) and [verification guide](../docs/verification.md) define the active reading and check scope; archived statistics and model names are not current conclusions.
+These materials support traceability. The [current lock](../current.lock.json) and [verification guide](../docs/verification.md) define the active reading and check scope; archived statistics and model names are not current conclusions. Confirmed defect evidence is maintained in the [contribution guide](../docs/contributions.md).
 
-The forks' historical research branches retain their original commits. The mainline does not maintain the old models, three-stage commands, nightly, or release verification.
+The forks' historical research branches retain their original commits. The mainline retains the selected TLC findings, observation kit, pinned tools, captured counterexamples, and current fixed-source reproduction. Broad historical theorem claims, the three-stage reading path, nightly, and release verification remain archival.

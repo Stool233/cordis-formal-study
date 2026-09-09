@@ -13,14 +13,14 @@ English | [中文](implementation.zh-CN.md)
 
 The forks' default branches provide official code and reading entry points; the research implementations are on `codex/upstream-alignment-2026-09-09`. Reproduction reads full commits, so later branch movement does not change the selected subjects.
 
-## How the runtime satisfies the checks
+## Locate the contribution fixes
 
 A fiber manages component activation, exit, and cleanup. On exit it retains the consumer's registry entry, waits for notified dependents to finish cleanup, and then recovers the provider's effects. Service resolution records the fiber providing the service. A replacement provider has a new binding identity even when it returns the same object.
 
-The [shared checks](../checks/lifecycle.mjs) observe these behaviors through real Context, plugin, dispose, and service operations. They read the provider record to confirm identity without editing runtime code or injecting trace callbacks.
+The [contribution guide](contributions.md) explains the TLC findings behind the unload wait and retirement visibility fixes. The [shared supporting checks](../checks/lifecycle.mjs) observe these behaviors through real Context, plugin, dispose, and service operations. They read the provider record to confirm identity without editing runtime code or injecting trace callbacks.
 
 ## Dependencies and scope
 
 Cordis core uses npm-locked Cosmokit; Harness uses vendored Cosmokit from the same Harness commit. [package-lock.json](../package-lock.json) fixes the checker and external dependencies. Each report records source trees, checker hashes, and the dependency-lock hash.
 
-This check set covers three lifecycle scenarios in each of these Cordis implementations. Harness AgentLoop, persistence backends, and the full application suite are outside the six results. [Reproduction](reproduce.md) explains how to run the checks.
+The supporting behavior check set covers three lifecycle scenarios in each implementation; the TLC contribution evidence has its own [scope](verification.md). Harness AgentLoop, persistence backends, and the full application suite are outside the six results. [Reproduction](reproduce.md) explains how to run the checks.

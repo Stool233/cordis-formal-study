@@ -1,34 +1,29 @@
-# Cordis：论文与实现
+# Cordis：TLC 发现的问题与修复
 
 [English](README.md) | 中文
 
-本项目帮助读者理解 Cordis 如何管理插件依赖与清理，并核对这些行为在 Cordis 和 DeepSeek Harness 中的实现。阅读依据是 [arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1)；检查对象是两份已锁定的 fork 实现。
+本项目通过 TLC 流程发现 Cordis 及 DeepSeek Harness 内置 Cordis 的生命周期缺陷，并验证相应修复。当前阅读对象是 [arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1)；[版本锁](current.lock.json)明确记录上游基线和包含修复的 fork 实现。
+
+## 我们确认的贡献
+
+| 发现 | 实际问题 | 修复 |
+| --- | --- | --- |
+| 等待依赖方清理 | 已绑定的 consumer 仍在卸载，provider 就开始回收资源 | Provider 恢复副作用前，等待已通知的 dependent 完成清理 |
+| 保留正在退出的 consumer | 并发销毁根节点时，正在卸载的 consumer 过早从运行时列表移除，provider 的等待因此漏掉它 | Consumer 清理结束前保持可发现性 |
+
+这是两个相关的实现缺陷，均在两份实现中复现。每份实现的三个拆卸场景提供证据。[贡献说明](docs/contributions.zh-CN.md)串起具体事件、TLC 反例、源码修复和复验结果。
 
 ## 从这里开始
 
-1. [论文中的三个关键要求](docs/paper.zh-CN.md)：理解依赖、清理顺序与 provider 身份。
-2. [当前实现](docs/implementation.zh-CN.md)：找到对应源码，区分官方基线与本次检查的 fork。
-3. [已确认的验证](docs/verification.zh-CN.md)：查看检查内容、结果及适用范围。
-4. [自己运行检查](docs/reproduce.zh-CN.md)：用一条命令重跑两端的同一组检查。
+1. [发现与修复](docs/contributions.zh-CN.md)：我们的 TLC 流程实际发现了什么。
+2. [当前论文](docs/paper.zh-CN.md)与[当前实现](docs/implementation.zh-CN.md)：相关规则和被检查的源码。
+3. [验证证据](docs/verification.zh-CN.md)：上游轨迹被拒绝、修复轨迹被接受，以及负向对照。
+4. [复现方法](docs/reproduce.zh-CN.md)：重放证据，或从源码重新生成修复后的轨迹。
 
-## 已确认什么
+## 仓库分工与范围
 
-| 行为 | Cordis fork | Harness 中的 Cordis fork |
-| --- | --- | --- |
-| 已绑定 consumer 完成异步清理后，provider 才释放资源 | 通过 | 通过 |
-| Consumer 正在清理时仍可被 registry 找到，清理后才移除 | 通过 | 通过 |
-| 新 provider 即使提供相同对象，consumer 也重新绑定到新身份 | 通过 | 通过 |
+本入口仓库维护模型、原始轨迹、工具版本、复现命令和报告。[Cordis fork](https://github.com/Stool233/cordis) 与 [Harness fork](https://github.com/Stool233/deepseek-harness) 的 `codex/upstream-alignment-2026-09-09` 分支承载修复；默认分支提供上游源码和阅读入口。
 
-这 6 项是具体实现的行为回归检查。论文依据与检查范围见[验证说明](docs/verification.zh-CN.md)；它们不构成论文全部定理或任意插件行为的证明。
+普通行为回归是 TLC 证据的补充。测试通过、人工变异被拒绝、其他历史轨迹不匹配，都不单独算作新的缺陷发现。这些选定证据也不构成整篇论文演算的证明。
 
-## 仓库分工
-
-| 仓库 | 内容 |
-| --- | --- |
-| 本门户 | 论文阅读、版本锁、共用检查与报告 |
-| [Cordis fork](https://github.com/Stool233/cordis) | 框架源码与生命周期修复 |
-| [Harness fork](https://github.com/Stool233/deepseek-harness) | Harness 源码及其使用的 Cordis |
-
-[current.lock.json](current.lock.json)记录论文版本、实现提交和检查清单。[历史归档](archive/README.zh-CN.md)单独保存此前的研究主张、模型、工具及证据。
-
-本项目是独立研究，不代表 Cordis 或 DeepSeek 的官方保证。
+[归档](archive/README.zh-CN.md)保留范围更广的历史主张和实验过程；已确认的贡献及可执行证据继续保留在主线。本项目是独立研究，不代表 Cordis 或 DeepSeek 的官方保证。

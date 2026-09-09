@@ -1,0 +1,9 @@
+[submodule "sources/cordis"]
+	path = sources/cordis
+	url = https://github.com/Stool233/cordis.git
+[submodule "sources/paper"]
+	path = sources/paper
+	url = https://github.com/cordiverse/paper.git
+[submodule "sources/deepseek-harness"]
+	path = sources/deepseek-harness
+	url = https://github.com/Stool233/deepseek-harness.git

@@ -1,0 +1,339 @@
+{
+  "$schema": "./schemas/study-lock.schema.json",
+  "schema": "cordis.formal-study-lock/v1",
+  "studyVersion": "0.1.0",
+  "commitIdentity": {
+    "name": "Stool233",
+    "email": "christry.stool@gmail.com"
+  },
+  "repositories": {
+    "cordis": {
+      "path": "sources/cordis",
+      "upstream": "https://github.com/cordiverse/cordis.git",
+      "source": "https://github.com/Stool233/cordis.git",
+      "branch": "research/paper-conformance",
+      "baseline": "8cc9e33fab69e2d0476d126baaf2acb24e6a6ab4",
+      "revision": "d06ee04a4c1c0cdd9605cd3d77521f90220d098b",
+      "role": "authoritative executable specification and upstream implementation trace target",
+      "license": "MIT",
+      "ownedCommits": [
+        "cd51867f98ecc208bc27b8037c90194e7291c310",
+        "36e5ee6065615adb5b25fe098c8e78813a20bdaf",
+        "18174ca2b1f8daa90567a78fdb4f83b5a1c7e9d0",
+        "a0f8baa9b9abfee73292c525ebcd46103b175b0d",
+        "23f5e7d6e4a0cf451567dad1caad7b4049df6992",
+        "fe45fb4d1e89fd6c8ae24399f601a3da9356da8a",
+        "112f71c2ecba8dc3b39d7e3f4c25834f0ef9337b",
+        "d06ee04a4c1c0cdd9605cd3d77521f90220d098b"
+      ],
+      "rewrittenCommits": [
+        {
+          "upstreamRevision": "ce854b593eae4d2ca6717945f26b85eb5f1ee264",
+          "studyRevision": "cd51867f98ecc208bc27b8037c90194e7291c310",
+          "subject": "feat: formalize Cordis paper conformance"
+        },
+        {
+          "upstreamRevision": "33cee0c972960eb72b1792b696c6ce897157200c",
+          "studyRevision": "36e5ee6065615adb5b25fe098c8e78813a20bdaf",
+          "subject": "docs: summarize formal conformance work in Chinese"
+        }
+      ]
+    },
+    "paper": {
+      "path": "sources/paper",
+      "upstream": "https://github.com/cordiverse/paper.git",
+      "source": "https://github.com/cordiverse/paper.git",
+      "branch": "main",
+      "baseline": "948a07b369c62adb3b12e102458be5c18dfb69b9",
+      "revision": "948a07b369c62adb3b12e102458be5c18dfb69b9",
+      "role": "fixed English paper source",
+      "license": "NOASSERTION",
+      "ownedCommits": [],
+      "rewrittenCommits": []
+    },
+    "deepseekHarness": {
+      "path": "sources/deepseek-harness",
+      "upstream": "https://github.com/deepseek-ai/deepseek-harness.git",
+      "source": "https://github.com/Stool233/deepseek-harness.git",
+      "branch": "research/paper-conformance",
+      "baseline": "47f943859bef60e4160492346772ded9b24f765a",
+      "revision": "4b00212558e33a0fee5dacb740621db16b1d43dc",
+      "role": "vendored Cordis and offline AgentLoop conformance target",
+      "license": "MIT",
+      "ownedCommits": [
+        "8ea7a4aa3f5ffe804f04560ece139b24e19af6d6",
+        "a9598b66ee117dd7e8a609c0b6c64fe87c251ad7",
+        "9a039fe3e17f0bd6fae09bdaae10d2fbfb59a21f",
+        "7797ad835a239bf5b8a229f2eb1d5cf7d8e4c773",
+        "8a85249fc94dc94608937041674950660d787f01",
+        "4b00212558e33a0fee5dacb740621db16b1d43dc"
+      ],
+      "rewrittenCommits": [
+        {
+          "upstreamRevision": "f9df688cf1a6cd56efe518166f51d29cc8a029f6",
+          "studyRevision": "8ea7a4aa3f5ffe804f04560ece139b24e19af6d6",
+          "subject": "test: verify vendored Cordis paper conformance"
+        }
+      ]
+    }
+  },
+  "branchMatrix": {
+    "cordis": {
+      "traceBaseline": {
+        "branch": "research/paper-trace-baseline",
+        "revision": "48c4604005b80b4e4fd7706088f5b721a16ea8de",
+        "traceInstrumentation": true,
+        "logicFixes": false,
+        "evidence": "expected-trace-mismatches",
+        "role": "paper trace capture over the unmodified upstream runtime"
+      },
+      "conformance": {
+        "branch": "research/paper-conformance",
+        "revision": "d06ee04a4c1c0cdd9605cd3d77521f90220d098b",
+        "traceInstrumentation": true,
+        "logicFixes": true,
+        "evidence": "formal-and-ordinary-tests-pass",
+        "role": "authoritative formal kit and corrected upstream trace target"
+      },
+      "upstreamFix": {
+        "branch": "fix/paper-conformance",
+        "revision": "3120ba9928bd5fe37e34f50e521077121000f050",
+        "traceInstrumentation": false,
+        "logicFixes": true,
+        "evidence": "ordinary-tests-pass",
+        "role": "trace-free source correction intended for an upstream proposal"
+      }
+    },
+    "deepseekHarness": {
+      "traceBaseline": {
+        "branch": "research/paper-trace-baseline",
+        "revision": "59c86088a75c4afe99d28244baedaa159231c46c",
+        "traceInstrumentation": true,
+        "logicFixes": false,
+        "evidence": "expected-trace-mismatches",
+        "role": "paper trace capture over the unmodified vendored runtime"
+      },
+      "conformance": {
+        "branch": "research/paper-conformance",
+        "revision": "4b00212558e33a0fee5dacb740621db16b1d43dc",
+        "traceInstrumentation": true,
+        "logicFixes": true,
+        "evidence": "formal-and-ordinary-tests-pass",
+        "role": "corrected vendored runtime, trace validation, and offline AgentLoop evidence"
+      },
+      "upstreamFix": {
+        "branch": "fix/paper-conformance",
+        "revision": "6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3",
+        "traceInstrumentation": false,
+        "logicFixes": true,
+        "evidence": "ordinary-tests-pass",
+        "role": "trace-free source correction intended for an upstream proposal"
+      }
+    }
+  },
+  "researchStages": [
+    {
+      "id": "baseline",
+      "order": 1,
+      "branchRole": "traceBaseline",
+      "traceInstrumentation": true,
+      "logicFixes": false,
+      "expectedOutcome": "expected-mismatch-reproduced",
+      "repositories": {
+        "cordis": {
+          "revision": "48c4604005b80b4e4fd7706088f5b721a16ea8de",
+          "traceMismatches": [
+            "provider-consumer-reverse-exit",
+            "async-consumer-teardown-guard",
+            "concurrent-root-teardown-guard",
+            "provider-identity-replacement",
+            "dependency-loss-during-iteration",
+            "dependency-return-during-unload",
+            "isolation-realms",
+            "confluence-left",
+            "confluence-right"
+          ],
+          "behaviorFailures": [
+            "provider-resources-outlive-asynchronous-consumers",
+            "retiring-consumers-remain-discoverable",
+            "disposal-invalidates-deferred-reload",
+            "awaited-provider-settles-transitive-activation"
+          ]
+        },
+        "deepseekHarness": {
+          "revision": "59c86088a75c4afe99d28244baedaa159231c46c",
+          "traceMismatches": [
+            "provider-consumer-reverse-exit",
+            "async-consumer-teardown-guard",
+            "concurrent-root-teardown-guard",
+            "provider-identity-replacement",
+            "dependency-loss-during-iteration",
+            "dependency-return-during-unload",
+            "isolation-realms",
+            "deepseek-agent-loop-assembly",
+            "confluence-left",
+            "confluence-right"
+          ],
+          "behaviorFailures": [
+            "provider-resources-outlive-asynchronous-consumers",
+            "retiring-consumers-remain-discoverable",
+            "awaited-provider-settles-transitive-activation"
+          ]
+        }
+      }
+    },
+    {
+      "id": "conformance",
+      "order": 2,
+      "branchRole": "conformance",
+      "traceInstrumentation": true,
+      "logicFixes": true,
+      "expectedOutcome": "formal-and-tests-pass",
+      "repositories": {
+        "cordis": {
+          "revision": "d06ee04a4c1c0cdd9605cd3d77521f90220d098b",
+          "traceMismatches": [],
+          "behaviorFailures": []
+        },
+        "deepseekHarness": {
+          "revision": "4b00212558e33a0fee5dacb740621db16b1d43dc",
+          "traceMismatches": [],
+          "behaviorFailures": []
+        }
+      }
+    },
+    {
+      "id": "upstream-fix",
+      "order": 3,
+      "branchRole": "upstreamFix",
+      "traceInstrumentation": false,
+      "logicFixes": true,
+      "expectedOutcome": "ordinary-tests-pass",
+      "repositories": {
+        "cordis": {
+          "revision": "3120ba9928bd5fe37e34f50e521077121000f050",
+          "traceMismatches": [],
+          "behaviorFailures": []
+        },
+        "deepseekHarness": {
+          "revision": "6bb3cdd9ca9b5dcb1019a6a9caf0307ef89c27f3",
+          "traceMismatches": [],
+          "behaviorFailures": []
+        }
+      }
+    }
+  ],
+  "paper": {
+    "path": "sources/paper/paper.pdf",
+    "sha256": "4d48478dc0b6222d9f74d7db10ee776449b1209eb112632336544d32a49db97f",
+    "language": "en",
+    "distribution": "referenced upstream; not included in evidence bundles"
+  },
+  "references": {
+    "specula": {
+      "repository": "https://github.com/specula-org/Specula.git",
+      "commit": "c6aa3dfa41cd4bc7411fae40bd040924c70d9725",
+      "version": "1.1.0",
+      "role": "trace instrumentation, validation, and debugging reference only"
+    }
+  },
+  "bootstrap": {
+    "cordis": {
+      "packageManager": "yarn@4.14.1",
+      "lockPath": "locks/cordis.yarn.lock",
+      "sha256": "b48729bfaa610ea6fcff3f249739891e2d1b97906c7e01d0e2cc4b7a326c125b"
+    }
+  },
+  "toolchain": {
+    "node": {
+      "version": "24"
+    },
+    "java": {
+      "version": "21"
+    },
+    "tlaTools": {
+      "version": "1.8.0",
+      "sha256": "ab323b79802aedc3203b3f9af37c6aca3ed43f4e0225b36f2aa77b26de46c05f"
+    },
+    "communityModules": {
+      "version": "202505152026",
+      "sha256": "044e8ecdfbca92d51d7eb4469422c2a7da1fe25dc8ad39c4a90e6622d6da4d99"
+    }
+  },
+  "evidence": {
+    "requiredProperties": [
+      "WriteLocality",
+      "LifoRecovery",
+      "RecoveryExactness",
+      "IndependentExchangeInvariant",
+      "Preservation",
+      "Ordering",
+      "ResolutionCoherence",
+      "Progress",
+      "ProgressBound",
+      "RuntimeRefinesPaper",
+      "CanonicalTerminalEquality",
+      "EventuallyCanonical"
+    ],
+    "coreScenarios": [
+      "provider-consumer-reverse-exit",
+      "async-consumer-teardown-guard",
+      "concurrent-root-teardown-guard",
+      "provider-identity-replacement",
+      "dependency-loss-during-iteration",
+      "dependency-return-during-unload",
+      "generator-lifo-recovery",
+      "top-level-concurrent-recovery",
+      "partial-install-failure-rollback",
+      "nested-registration-cascade",
+      "isolation-realms",
+      "confluence-left",
+      "confluence-right"
+    ],
+    "deepseekScenarios": [
+      "vendored-reentrant-dispose",
+      "vendored-pending-effect",
+      "vendored-async-cleanup-join",
+      "deepseek-agent-loop-assembly"
+    ],
+    "coreScenarioCount": 13,
+    "fullScenarioCount": 17,
+    "prerequisiteAudits": [
+      {
+        "name": "cyclic-dependencies",
+        "property": "Progress",
+        "status": "not-applicable"
+      },
+      {
+        "name": "non-independent-effects",
+        "property": "Confluence",
+        "status": "not-applicable"
+      },
+      {
+        "name": "non-total-provision",
+        "property": "Progress",
+        "status": "not-applicable"
+      }
+    ],
+    "mutations": [
+      "remove-unload-guard",
+      "compare-target-by-value",
+      "fifo-recovery",
+      "stale-committed-provider"
+    ],
+    "mutationCount": 4,
+    "observationPointCount": 29,
+    "nightlyModel": {
+      "strategy": "layered-bfs-and-fixed-simulation",
+      "simulationRunCount": 4,
+      "tracesPerRun": 100000,
+      "traceDepth": 100,
+      "seed": 113,
+      "aril": 0,
+      "temporalPropertiesExhaustiveOnly": [
+        "Progress",
+        "EventuallyCanonical"
+      ]
+    }
+  }
+}

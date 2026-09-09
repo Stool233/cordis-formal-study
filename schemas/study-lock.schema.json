@@ -1,0 +1,365 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/Stool233/cordis-formal-study/blob/main/schemas/study-lock.schema.json",
+  "title": "Cordis Formal Study Lock",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "$schema",
+    "schema",
+    "studyVersion",
+    "commitIdentity",
+    "repositories",
+    "branchMatrix",
+    "researchStages",
+    "paper",
+    "references",
+    "bootstrap",
+    "toolchain",
+    "evidence"
+  ],
+  "properties": {
+    "$schema": {
+      "const": "./schemas/study-lock.schema.json"
+    },
+    "schema": {
+      "const": "cordis.formal-study-lock/v1"
+    },
+    "studyVersion": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "commitIdentity": {
+      "$ref": "#/$defs/identity"
+    },
+    "repositories": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cordis", "paper", "deepseekHarness"],
+      "properties": {
+        "cordis": { "$ref": "#/$defs/repository" },
+        "paper": { "$ref": "#/$defs/repository" },
+        "deepseekHarness": { "$ref": "#/$defs/repository" }
+      }
+    },
+    "branchMatrix": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cordis", "deepseekHarness"],
+      "properties": {
+        "cordis": { "$ref": "#/$defs/branchSet" },
+        "deepseekHarness": { "$ref": "#/$defs/branchSet" }
+      }
+    },
+    "researchStages": {
+      "type": "array",
+      "minItems": 3,
+      "items": { "$ref": "#/$defs/researchStage" }
+    },
+    "paper": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["path", "sha256", "language", "distribution"],
+      "properties": {
+        "path": { "type": "string", "const": "sources/paper/paper.pdf" },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "language": { "type": "string", "const": "en" },
+        "distribution": { "type": "string", "minLength": 1 }
+      }
+    },
+    "references": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["specula"],
+      "properties": {
+        "specula": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["repository", "commit", "version", "role"],
+          "properties": {
+            "repository": { "type": "string", "pattern": "^https://" },
+            "commit": { "$ref": "#/$defs/revision" },
+            "version": { "type": "string", "const": "1.1.0" },
+            "role": { "type": "string", "minLength": 1 }
+          }
+        }
+      }
+    },
+    "bootstrap": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["cordis"],
+      "properties": {
+        "cordis": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["packageManager", "lockPath", "sha256"],
+          "properties": {
+            "packageManager": { "type": "string", "const": "yarn@4.14.1" },
+            "lockPath": { "type": "string", "const": "locks/cordis.yarn.lock" },
+            "sha256": { "$ref": "#/$defs/sha256" }
+          }
+        }
+      }
+    },
+    "toolchain": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["node", "java", "tlaTools", "communityModules"],
+      "properties": {
+        "node": { "$ref": "#/$defs/versionOnly" },
+        "java": { "$ref": "#/$defs/versionOnly" },
+        "tlaTools": { "$ref": "#/$defs/hashedTool" },
+        "communityModules": { "$ref": "#/$defs/hashedTool" }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "requiredProperties",
+        "coreScenarios",
+        "deepseekScenarios",
+        "coreScenarioCount",
+        "fullScenarioCount",
+        "prerequisiteAudits",
+        "mutations",
+        "mutationCount",
+        "observationPointCount",
+        "nightlyModel"
+      ],
+      "properties": {
+        "requiredProperties": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "coreScenarios": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "deepseekScenarios": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "coreScenarioCount": { "type": "integer", "minimum": 1 },
+        "fullScenarioCount": { "type": "integer", "minimum": 1 },
+        "prerequisiteAudits": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/prerequisite" }
+        },
+        "mutations": { "$ref": "#/$defs/nonEmptyUniqueStrings" },
+        "mutationCount": { "type": "integer", "minimum": 1 },
+        "observationPointCount": { "type": "integer", "minimum": 1 },
+        "nightlyModel": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": [
+            "strategy",
+            "simulationRunCount",
+            "tracesPerRun",
+            "traceDepth",
+            "seed",
+            "aril",
+            "temporalPropertiesExhaustiveOnly"
+          ],
+          "properties": {
+            "strategy": { "const": "layered-bfs-and-fixed-simulation" },
+            "simulationRunCount": { "type": "integer", "minimum": 1 },
+            "tracesPerRun": { "type": "integer", "minimum": 1 },
+            "traceDepth": { "type": "integer", "minimum": 1 },
+            "seed": { "type": "integer" },
+            "aril": { "type": "integer" },
+            "temporalPropertiesExhaustiveOnly": { "$ref": "#/$defs/nonEmptyUniqueStrings" }
+          }
+        }
+      }
+    }
+  },
+  "$defs": {
+    "identity": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "email"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "email": { "type": "string", "pattern": "^[^@]+@[^@]+$" }
+      }
+    },
+    "revision": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{40}$"
+    },
+    "sha256": {
+      "type": "string",
+      "pattern": "^[0-9a-f]{64}$"
+    },
+    "rewrite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["upstreamRevision", "studyRevision", "subject"],
+      "properties": {
+        "upstreamRevision": { "$ref": "#/$defs/revision" },
+        "studyRevision": { "$ref": "#/$defs/revision" },
+        "subject": { "type": "string", "minLength": 1 }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "path",
+        "upstream",
+        "source",
+        "branch",
+        "baseline",
+        "revision",
+        "role",
+        "license",
+        "ownedCommits",
+        "rewrittenCommits"
+      ],
+      "properties": {
+        "path": { "type": "string", "pattern": "^sources/[a-z0-9-]+$" },
+        "upstream": { "type": "string", "pattern": "^https://" },
+        "source": { "type": "string", "pattern": "^https://" },
+        "branch": { "type": "string", "minLength": 1 },
+        "baseline": { "$ref": "#/$defs/revision" },
+        "revision": { "$ref": "#/$defs/revision" },
+        "role": { "type": "string", "minLength": 1 },
+        "license": { "type": "string", "enum": ["MIT", "NOASSERTION"] },
+        "ownedCommits": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/revision" }
+        },
+        "rewrittenCommits": {
+          "type": "array",
+          "items": { "$ref": "#/$defs/rewrite" }
+        }
+      }
+    },
+    "branchSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["traceBaseline", "conformance", "upstreamFix"],
+      "properties": {
+        "traceBaseline": { "$ref": "#/$defs/branchVariant" },
+        "conformance": { "$ref": "#/$defs/branchVariant" },
+        "upstreamFix": { "$ref": "#/$defs/branchVariant" }
+      }
+    },
+    "branchVariant": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "branch",
+        "revision",
+        "traceInstrumentation",
+        "logicFixes",
+        "evidence",
+        "role"
+      ],
+      "properties": {
+        "branch": { "type": "string", "pattern": "^(research|fix)/[a-z0-9][a-z0-9-]*$" },
+        "revision": { "$ref": "#/$defs/revision" },
+        "traceInstrumentation": { "type": "boolean" },
+        "logicFixes": { "type": "boolean" },
+        "evidence": {
+          "type": "string",
+          "enum": [
+            "expected-trace-mismatches",
+            "formal-and-ordinary-tests-pass",
+            "ordinary-tests-pass"
+          ]
+        },
+        "role": { "type": "string", "minLength": 1 }
+      }
+    },
+    "researchStage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "id",
+        "order",
+        "branchRole",
+        "traceInstrumentation",
+        "logicFixes",
+        "expectedOutcome",
+        "repositories"
+      ],
+      "properties": {
+        "id": {
+          "type": "string",
+          "enum": ["baseline", "conformance", "upstream-fix"]
+        },
+        "order": { "type": "integer", "minimum": 1 },
+        "branchRole": {
+          "type": "string",
+          "enum": ["traceBaseline", "conformance", "upstreamFix"]
+        },
+        "traceInstrumentation": { "type": "boolean" },
+        "logicFixes": { "type": "boolean" },
+        "expectedOutcome": {
+          "type": "string",
+          "enum": [
+            "expected-mismatch-reproduced",
+            "formal-and-tests-pass",
+            "ordinary-tests-pass"
+          ]
+        },
+        "repositories": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["cordis", "deepseekHarness"],
+          "properties": {
+            "cordis": { "$ref": "#/$defs/stageRepository" },
+            "deepseekHarness": { "$ref": "#/$defs/stageRepository" }
+          }
+        }
+      }
+    },
+    "stageRepository": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["revision", "traceMismatches", "behaviorFailures"],
+      "properties": {
+        "revision": { "$ref": "#/$defs/revision" },
+        "traceMismatches": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        },
+        "behaviorFailures": {
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "type": "string", "minLength": 1 }
+        }
+      }
+    },
+    "versionOnly": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 }
+      }
+    },
+    "hashedTool": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["version", "sha256"],
+      "properties": {
+        "version": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "nonEmptyUniqueStrings": {
+      "type": "array",
+      "minItems": 1,
+      "uniqueItems": true,
+      "items": { "type": "string", "minLength": 1 }
+    },
+    "prerequisite": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "property", "status"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1 },
+        "property": { "type": "string", "minLength": 1 },
+        "status": { "type": "string", "const": "not-applicable" }
+      }
+    }
+  }
+}

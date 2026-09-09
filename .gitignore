@@ -2,5 +2,6 @@ node_modules/
 .artifacts/
 dist/
 *.jar
+!tools/artifacts/*.jar
 .DS_Store
 sources/

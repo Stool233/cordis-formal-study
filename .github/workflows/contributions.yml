@@ -1,0 +1,38 @@
+name: TLC contributions
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  replay:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v6
+        with:
+          node-version: 24
+          cache: npm
+      - uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - run: npm ci
+      - run: npm run check:contributions -- --output .artifacts/contributions/ci
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: tlc-contribution-evidence
+          path: |
+            .artifacts/contributions/ci/
+            !.artifacts/**/states/**
+          include-hidden-files: true
+          if-no-files-found: warn

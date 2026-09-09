@@ -1,45 +1,45 @@
-# 运行当前检查
+# 复现我们的贡献
 
 [English](reproduce.md) | 中文
 
-需要 Node.js 24、npm、Git 和 tar。首次运行需要访问 npm 与两个 fork 的 Git 仓库；不需要模型 API key、Corepack、Java 或 TLC。
+使用 Node.js 24 和 Java 21。TLC 与 Community Modules 已随仓库保存，不需要模型 API key 或下载形式化工具。先在仓库根目录安装 npm 依赖。
 
-## 从干净 checkout 开始
-
-在本仓库根目录运行：
+## 重放选定的 TLC 证据
 
 ```sh
 npm ci
 npm test
 npm run verify
-npm run check:current
+npm run check:contributions -- --output .artifacts/contributions/local
 ```
 
-最后一条命令自动获取[版本锁](../current.lock.json)指定的提交，导出待检查源码，并对两端执行同一组检查。正常输出包括 `Current verification: 6 / 6 passed` 和报告路径。
+预期结果是：**6 份修复前轨迹被拒绝，6 份修复轨迹被接受，2 个负向对照被拒绝**。每份真实轨迹都会运行原始检查器和聚焦卸载守卫。可以在指定输出目录查看 `report.json`、`tlc.log` 和 `counterexample.json`。任何非预期结果都会让命令失败，不留下成功的汇总报告。
 
-## 使用已有的本地 Git 仓库
+这个命令重新检查已提交的实现观测，不会重新生成轨迹。[贡献锁](../contributions.lock.json)记录源码提交、轨迹哈希、模型哈希和工具版本。
+
+## 从源码重新生成修复轨迹
+
+准备干净 checkout：Cordis 为 `18c327f4566e8f640737c43a480e6d74a0673579`，Harness 为 `fdcd1ce36a296ab2288bf407fccba4c8fa634963`。两份仓库都需要包含观测工具所用的历史 Git 对象。日常 checkout 若有工作内容，请使用独立 worktree。启用 Corepack 后执行：
 
 ```sh
-npm run check:current -- --cordis ../cordis --deepseek-harness ../deepseek-harness
+git submodule update --init --recursive
+npm run test:tools
+npm run reproduce:alignment -- --cordis /path/to/fixed-cordis --deepseek-harness /path/to/fixed-harness
 ```
 
-这两个路径只用于提供锁定提交的 Git 对象。命令不执行或修改它们的工作区，也不要求它们当前检出的分支等于研究分支。如果本地仓库没有该提交，可以先获取它，或省略路径让命令自动获取。
+命令安装锁定依赖，在隔离 worktree 应用固定观测补丁，重新生成轨迹并执行工具包检查。最后的贡献检查要求六份选定修复轨迹与已提交证据一致，再运行 TLC。结果位于 `.artifacts/alignment/run-*/evidence/`，贡献报告为其中的 `contributions/report.json`。[对齐 workflow](../.github/workflows/upstream-alignment.yml)自动完成 checkout 和工具链准备。
 
-## 查看报告
+[study.lock.json](../study.lock.json)锁定观测工具包及其前置条件；[alignment.lock.json](../alignment.lock.json)锁定当前修复源码和适配补丁。内部沿用的历史模型名称是复现输入，不是当前论文的已证明定理目录。完整的原始修复前采集过程仍可从[归档](../archive/README.zh-CN.md)恢复。
 
-可以指定输出目录，并校验刚生成的报告：
+## 执行补充行为检查
 
 ```sh
 npm run check:current -- --output .artifacts/current/local
 npm run verify -- --report .artifacts/current/local/report.json
 ```
 
-聚合报告只在两端全部通过后生成；失败运行不会沿用该目录中的旧聚合报告。报告列出论文、Node 版本和运行平台、源码提交及 tree、检查器与依赖锁哈希、各项结果。仓库保留的[确认报告](verification-report.json)使用相同格式。
+命令获取锁定 Git 对象，将源码导出到临时目录执行。可附加 `--cordis ../cordis --deepseek-harness ../deepseek-harness` 复用本地对象，不执行或修改这些工作区。六个补充回归必须全部通过。
 
-`npm test`检查锁与报告验证器的拒绝路径；`npm run verify`检查文档、版本锁和已记录报告。CI 还会重新执行真实实现检查，见[验证说明](verification.zh-CN.md)。
+## 审阅后再更新版本
 
-## 更新研究对象
-
-更换论文版本或源码时，更新版本锁和阅读说明，核对相关规则与实现，再重跑这组检查并更新确认报告。某次通过只适用于报告中记录的输入与版本。
-
-旧研究有独立的[归档入口](../archive/README.zh-CN.md)。
+修改版本锁前，先审阅新论文或新实现。重新生成相关问题两侧的证据，检查实际违规恢复步骤，执行修复源码验证和负向对照，再更新轨迹与报告。不要把无关不匹配算作确认的贡献，也不要自动接受变化的工具字节。

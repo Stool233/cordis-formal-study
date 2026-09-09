@@ -1,34 +1,29 @@
-# Cordis: paper and implementation
+# Cordis: TLC findings and fixes
 
 English | [中文](README.zh-CN.md)
 
-This project explains how Cordis manages plugin dependencies and cleanup, and checks these behaviors in Cordis and DeepSeek Harness. The reading source is [arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1); the checked implementations are two pinned forks.
+This study uses TLC to expose lifecycle defects in Cordis and the Cordis implementation in DeepSeek Harness, then verifies the fixes. The active reading source is [arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1); [the version lock](current.lock.json) identifies the official bases and fixed fork implementations.
+
+## Our confirmed contributions
+
+| Finding | Observable defect | Fix |
+| --- | --- | --- |
+| Wait for dependent cleanup | A provider starts resource recovery while its bound consumer is still unloading | Await notified dependents before recovering provider effects |
+| Retain retiring consumers | Concurrent root disposal removes an unloading consumer from the runtime list, allowing the provider's wait to miss it | Keep the consumer discoverable until cleanup quiesces |
+
+These are two related implementation defects, reproduced in both implementations. Three teardown scenarios per implementation provide the evidence. The [contribution guide](docs/contributions.md) connects the concrete events, TLC counterexamples, source fixes, and verification.
 
 ## Start here
 
-1. [Three requirements from the paper](docs/paper.md): understand dependencies, cleanup order, and provider identity.
-2. [Current implementation](docs/implementation.md): locate the code and distinguish the official bases from the checked forks.
-3. [Confirmed verification](docs/verification.md): see the checks, results, and their scope.
-4. [Run the checks](docs/reproduce.md): run the same check set against both implementations with one command.
+1. [Findings and fixes](docs/contributions.md): what our TLC workflow actually found.
+2. [Current paper](docs/paper.md) and [implementation](docs/implementation.md): the relevant rules and selected source.
+3. [Verification evidence](docs/verification.md): rejected upstream traces, accepted fixed traces, and negative controls.
+4. [Reproduce](docs/reproduce.md): replay the evidence or regenerate fixed traces from source.
 
-## What is confirmed
+## Repositories and scope
 
-| Behavior | Cordis fork | Cordis in the Harness fork |
-| --- | --- | --- |
-| A provider releases its resource after its bound consumer finishes asynchronous cleanup | pass | pass |
-| A consumer remains discoverable in the registry during cleanup and is removed afterward | pass | pass |
-| A replacement provider triggers a new consumer binding even when it provides the same object | pass | pass |
+This portal owns the models, captured traces, tool pins, reproduction commands, and reports. The [Cordis fork](https://github.com/Stool233/cordis) and [Harness fork](https://github.com/Stool233/deepseek-harness) carry the fixes on `codex/upstream-alignment-2026-09-09`; their default branches provide official source and reading guides.
 
-These six results are concrete implementation regression checks. [Verification](docs/verification.md) explains their paper basis and scope; they do not prove every paper theorem or arbitrary plugin behavior.
+Ordinary behavior regressions supplement the TLC evidence. Passing tests, artificial mutations, and unrelated historical trace mismatches are not additional defect discoveries. The selected evidence does not prove the complete paper calculus.
 
-## Repositories
-
-| Repository | Contents |
-| --- | --- |
-| This portal | Paper reading, version lock, shared checks, and reports |
-| [Cordis fork](https://github.com/Stool233/cordis) | Framework source and lifecycle fixes |
-| [Harness fork](https://github.com/Stool233/deepseek-harness) | Harness source and its Cordis implementation |
-
-[current.lock.json](current.lock.json) records the paper version, implementation commits, and check inventory. The [historical archive](archive/README.md) separately preserves earlier claims, models, tools, and evidence.
-
-This is independent research and does not represent an official Cordis or DeepSeek guarantee.
+The [archive](archive/README.md) preserves the broader historical claims and experiment history. The confirmed contributions and their executable evidence remain on the mainline. This is independent research, not an official Cordis or DeepSeek guarantee.

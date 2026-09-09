@@ -19,6 +19,8 @@ Fiber 管理组件的激活、退出与清理。退出时，它保留 consumer �
 
 [共用检查](../checks/lifecycle.mjs)通过真实的 Context、plugin、dispose 与服务访问来观察这些行为。它读取 provider 记录确认身份，不修改运行时代码或注入轨迹回调。
 
+[贡献说明](contributions.zh-CN.md)解释卸载等待与 retirement 可发现性修复背后的 TLC 发现；普通行为检查是补充证据。
+
 ## 依赖与范围
 
 Cordis core 使用 npm 锁定的 Cosmokit；Harness 使用同一 Harness 提交中的 vendored Cosmokit。检查器与外部依赖版本由 [package-lock.json](../package-lock.json)固定。每次报告记录源码 tree、检查器哈希和依赖锁哈希。
