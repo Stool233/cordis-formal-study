@@ -11,6 +11,7 @@ import {
   validateSubmoduleState,
 } from './evidence.mjs'
 import { validateSchema } from './schema.mjs'
+import { formalToolEnvironment, verifyToolArtifacts } from './toolchain.mjs'
 import {
   checkoutRoot,
   requireStageCheckout,
@@ -36,6 +37,7 @@ const documentationPairs = [
   ['docs/reproduce.md', 'docs/reproduce.zh-CN.md'],
   ['docs/results.md', 'docs/results.zh-CN.md'],
   ['docs/upstream-alignment.md', 'docs/upstream-alignment.zh-CN.md'],
+  ['tools/README.md', 'tools/README.zh-CN.md'],
 ]
 
 function repositoryEntries(lock) {
@@ -448,6 +450,16 @@ async function validateAlignmentSnapshot(lock) {
   assert.equal(snapshot.migration.reportSha256, await sha256File(resolve(studyRoot, 'docs/alignment-report.json')))
 }
 
+async function validateBundledTools(lock) {
+  await verifyToolArtifacts()
+  await formalToolEnvironment(lock.toolchain, { environment: {} })
+  const alignment = await readJson(resolve(studyRoot, 'alignment.lock.json'))
+  await formalToolEnvironment({
+    tlaTools: alignment.tlaTools,
+    communityModules: lock.toolchain.communityModules,
+  }, { environment: {} })
+}
+
 /** Validate the portal lock, initialized sources, documentation, and generated evidence. */
 export async function verifyPortal(options = {}) {
   const lock = await loadStudyLock()
@@ -467,6 +479,7 @@ export async function verifyPortal(options = {}) {
     validatePortalFiles(),
     validateLicenses(lock, states),
     validateAlignmentSnapshot(lock),
+    validateBundledTools(lock),
   ])
   if (states.deepseekHarness.initialized) await validateDeepSeekSource(lock)
   await validateExistingStageCheckouts(lock)

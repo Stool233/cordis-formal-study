@@ -96,9 +96,9 @@ Every JSON/NDJSON reference is a normalized POSIX path relative to `.artifacts` 
 
 ## Integrity and CI
 
-[Upstream alignment](../.github/workflows/upstream-alignment.yml) runs the current migration on relevant pushes, pull requests, or manual dispatch. It checks out the exact two fork candidates, runs behavior/model/trace/mutation checks, and uploads only the evidence directory. The historical Conformance, Nightly, and Release workflows keep their original experiment and remain subject to the [historical TLC availability issue](upstream-alignment.md#changed-tlc-release-asset).
+[Upstream alignment](../.github/workflows/upstream-alignment.yml) runs the current migration on relevant pushes, pull requests, or manual dispatch. It checks out the exact two fork candidates, runs behavior/model/trace/mutation checks, and uploads only the evidence directory. Historical Conformance, Nightly, and Release retain their original experiment. All formal entry points use [bundled artifacts](../tools/README.md), checked against the selected lock before passing their paths to the unchanged kit's own checksum verifier.
 
-`npm run verify` checks lock schemas, stage order and revision mapping, gitlinks, clean submodules and stage checkouts, paper hash, personal commit identity, Cordis/DSH pins, observation/scenario inventories, report paths, and bilingual links. If stage evidence exists, verify revalidates its semantics.
+`npm run verify` checks lock schemas, stage order and revision mapping, gitlinks, clean submodules and stage checkouts, paper and bundled-tool hashes, personal commit identity, Cordis/DSH pins, observation/scenario inventories, report paths, and bilingual links. If stage evidence exists, verify revalidates its semantics.
 
 The Integrity workflow runs no TLC. Conformance runs one manually selected stage or defaults to the full study on pull requests and relevant `main` pushes. Nightly runs all three stages before running layered exhaustive and fixed-seed sampled model bounds on the conformance Cordis checkout. Release reruns and packages evidence from the same locked sources.
 

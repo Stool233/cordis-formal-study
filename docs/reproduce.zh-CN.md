@@ -13,6 +13,8 @@
 
 两条路径都需要 Node.js 24、Java 21、Git 和 Corepack。它们检查不同的源码快照与工具哈希，报告分别保存。
 
+TLC 与 CommunityModules 来自[当前 checkout 中经哈希校验的文件](../tools/README.zh-CN.md)，两条路径均不下载这些工具，也不依赖 Actions 缓存。显式 `CORDIS_TLA_TOOLS_JAR` / `CORDIS_TLA_COMMUNITY_JAR` 覆盖必须匹配所选 lock；取消陈旧覆盖即可使用入库文件。
+
 ## 初始化门户
 
 首次使用时：
@@ -54,7 +56,7 @@ npm run reproduce:alignment -- --cordis ../cordis --deepseek-harness ../deepseek
 
 ## 历史实验：工具可用性
 
-上游替换了原始 TLC 1.8.0 资产。全新运行历史形式化流程，目前会在固定哈希校验处停止。只有匹配原哈希的本地 JAR 才能使用；修改哈希会变成另一组实验。详见[工具对比](upstream-alignment.zh-CN.md#tlc-下载发生了变化)。
+上游替换过原始 TLC 1.8.0 资产，但已从早期成功的 CI 产物恢复其精确字节，并按原哈希提交入库。历史命令现在自动选择该文件。[工具指南](../tools/README.zh-CN.md)记录来源、双重哈希校验与离线测试；历史工具 pin 没有变化。
 
 下列命令保留原始实验。`reproduce:upstream-fix` 仅运行普通检查，不依赖 TLC。
 
@@ -174,7 +176,7 @@ npm run verify -- --full
 | Nightly | 每周一 03:17 UTC、手动 | 完整三阶段，然后 `reproduce:nightly`。 |
 | Release | `v*` tag | 完整三阶段、nightly、完整性检查、证据打包和 GitHub Release。 |
 
-只向 Cordis 或 DeepSeek Harness 的 research 分支 push 不等于触发门户的跨仓检查。Upstream alignment 验证当前迁移；Conformance 与 Nightly 复现历史研究，目前会在原 TLC 哈希检查处停止。
+只向 Cordis 或 DeepSeek Harness 的 research 分支 push 不等于触发门户的跨仓检查。Upstream alignment 验证当前迁移，Conformance 与 Nightly 复现历史研究。所有形式化 workflow 都使用入库资产，并在复现前运行 `test:tools`。
 
 ## Release 证据
 

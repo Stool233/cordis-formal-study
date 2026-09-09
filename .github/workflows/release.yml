@@ -31,6 +31,7 @@ jobs:
 
       - run: corepack enable
       - run: npm ci
+      - run: npm run test:tools
       - run: npm run bootstrap:study
       - run: npm run reproduce:study
       - run: npm run reproduce:nightly

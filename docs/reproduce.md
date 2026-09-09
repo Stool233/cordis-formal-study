@@ -13,6 +13,8 @@ This guide covers the current migration and the original three-stage study. Read
 
 Both paths need Node.js 24, Java 21, Git, and Corepack. They test different source snapshots and tool hashes; their reports are kept separately.
 
+TLC and CommunityModules come from the [hash-verified files in this checkout](../tools/README.md). Neither path downloads those tools or depends on an Actions cache. Explicit `CORDIS_TLA_TOOLS_JAR` / `CORDIS_TLA_COMMUNITY_JAR` overrides must match the selected lock; unset a stale override to use the bundled files.
+
 ## Set up the portal
 
 For a fresh checkout:
@@ -54,7 +56,7 @@ Repository tests, builds, lint, and documentation checks are separate from this 
 
 ## Historical experiment: tool availability
 
-The original TLC 1.8.0 asset was replaced upstream. A fresh historical formal run currently stops at its pinned hash check. A local JAR is usable only if it matches the original hash; changing that hash would create a different experiment. See [the tool comparison](upstream-alignment.md#changed-tlc-release-asset).
+The original TLC 1.8.0 asset was replaced upstream, but its exact bytes have been recovered from an earlier successful CI artifact and committed under the original hash. Historical commands now select that file automatically. The [tool guide](../tools/README.md) records provenance, double hash verification, and offline tests; no historical tool pin was changed.
 
 The instructions below preserve the original experiment. `reproduce:upstream-fix` runs ordinary checks and does not require TLC.
 
@@ -174,7 +176,7 @@ These are lower-level stage-two profiles and do not replace the three-stage `rep
 | Nightly | Monday 03:17 UTC, manual | Full three-stage study, then `reproduce:nightly`. |
 | Release | `v*` tag | Full study, nightly, integrity, evidence packaging, and GitHub Release. |
 
-Pushing only a Cordis or DeepSeek Harness research branch does not trigger the portal's cross-repository checks. Upstream alignment verifies the current migration; Conformance and Nightly reproduce the historical study and currently stop at the original TLC hash check.
+Pushing only a Cordis or DeepSeek Harness research branch does not trigger the portal's cross-repository checks. Upstream alignment verifies the current migration; Conformance and Nightly reproduce the historical study. All formal workflows use the bundled artifacts and run `test:tools` before reproduction.
 
 ## Release evidence
 

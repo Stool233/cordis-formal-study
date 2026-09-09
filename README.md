@@ -23,7 +23,7 @@ These are scenario counts, not independent bug counts or counts of paper-theorem
 
 The 2026-09-09 check uses official Cordis `f8ea3cd` and Harness `5dda764`. The two forks have separate migration branches based on those revisions. Their fixes and verification are recorded in [Upstream alignment](docs/upstream-alignment.md).
 
-The original three-stage snapshots remain unchanged. The TLC 1.8.0 download has changed again and now differs from both the historical and migration locks; fresh downloads stop at hash verification. See the [CI follow-up](docs/upstream-alignment.md#ci-follow-up-after-the-paper-review). The recorded migration uses its explicitly pinned newer tool and the historical specification.
+The original three-stage snapshots remain unchanged. Both exact TLC builds and CommunityModules are now [bundled by hash](tools/README.md), including the recovered historical JAR. Formal commands use these checked files, so replacement of the official release asset no longer affects tool acquisition. The migration retains its separately pinned tool and the historical specification.
 
 The [arXiv v1 review](docs/arxiv-review.md) is complete at the level of conclusions and premises: retain the cleanup fixes, narrow publication/recovery/confluence claims, and keep full arXiv formal validation marked `not-validated`.
 

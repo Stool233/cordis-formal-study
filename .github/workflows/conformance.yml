@@ -22,6 +22,8 @@ on:
       - 'locks/**'
       - 'schemas/**'
       - 'scripts/**'
+      - 'tools/**'
+      - 'test/toolchain*'
       - 'sources/cordis'
       - 'sources/deepseek-harness'
       - 'study.lock.json'
@@ -35,6 +37,8 @@ on:
       - 'locks/**'
       - 'schemas/**'
       - 'scripts/**'
+      - 'tools/**'
+      - 'test/toolchain*'
       - 'sources/cordis'
       - 'sources/deepseek-harness'
       - 'study.lock.json'
@@ -67,6 +71,7 @@ jobs:
 
       - run: corepack enable
       - run: npm ci
+      - run: npm run test:tools
       - run: npm run bootstrap:study
       - run: npm run "reproduce:${RESEARCH_STAGE}"
       - run: npm run verify -- --full

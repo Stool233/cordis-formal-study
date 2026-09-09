@@ -6,6 +6,7 @@ import { join, resolve } from 'node:path'
 import { validateEvidenceOutput, validateModelReport, assertPortableEvidence } from './lib/evidence.mjs'
 import { loadStudyLock } from './lib/integrity.mjs'
 import { exists, git, readJson, run, sha256, sha256File, studyRoot, relativePosix } from './lib/system.mjs'
+import { formalToolEnvironment } from './lib/toolchain.mjs'
 
 const keys = ['cordis', 'deepseekHarness']
 const flags = { cordis: '--cordis', deepseekHarness: '--deepseek-harness' }
@@ -62,6 +63,10 @@ async function main() {
   assert.equal(alignment.historicalStudyLockSha256, await sha256File(join(studyRoot, 'study.lock.json')))
   assert.equal(alignment.specificationRevision, historical.repositories.cordis.revision)
   assert.equal(alignment.harnessScenarioRevision, historical.repositories.deepseekHarness.revision)
+  const toolEnv = await formalToolEnvironment({
+    tlaTools: alignment.tlaTools,
+    communityModules: historical.toolchain.communityModules,
+  })
   const roots = Object.fromEntries(keys.map(key => [key, resolve(option(flags[key], defaults[key]))]))
   const patches = [alignment.cordisDependencyLock, ...keys.map(key => alignment.repositories[key].instrumentation)]
   for (const patch of patches) {
@@ -127,7 +132,7 @@ async function main() {
   await symlink(join(observed.cordis, 'packages/core'), join(kit, 'packages/core'), 'dir')
   await run(process.execPath, [join(kit, 'formal/tools/verify-observation.mjs')])
   const cache = join(studyRoot, '.artifacts/tool-cache')
-  const formal = async (command, extra = []) => run(process.execPath, [runner, command, '--cache', cache, '--quiet', ...extra])
+  const formal = async (command, extra = []) => run(process.execPath, [runner, command, '--cache', cache, '--quiet', ...extra], { env: toolEnv })
   console.log('alignment: checking the historical specification with the recorded TLC artifact')
   await formal('portable')
   await formal('syntax', ['--output', join(output, 'models')])

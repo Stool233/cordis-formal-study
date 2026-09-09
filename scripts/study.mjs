@@ -21,6 +21,7 @@ import {
   withCordisDependencyLock,
 } from './lib/stages.mjs'
 import { readJson, run, studyRoot } from './lib/system.mjs'
+import { formalToolEnvironment } from './lib/toolchain.mjs'
 
 const artifactsRoot = resolve(studyRoot, '.artifacts')
 
@@ -94,6 +95,7 @@ async function bootstrap(scope) {
 }
 
 async function reproducePrimaryCordis(lock, profile) {
+  const toolEnv = await formalToolEnvironment(lock.toolchain)
   const output = resolve(artifactsRoot, profile === 'nightly' ? 'cordis-nightly' : 'cordis-pr')
   const cache = resolve(artifactsRoot, 'tool-cache')
   await rm(output, { recursive: true, force: true })
@@ -103,7 +105,7 @@ async function reproducePrimaryCordis(lock, profile) {
     '--quiet',
     '--output', output,
     '--cache', cache,
-  ], { cwd: root }))
+  ], { cwd: root, env: toolEnv }))
   await validateEvidenceOutput(output, lock, {
     role: 'upstream',
     revision: lock.repositories.cordis.revision,
@@ -112,6 +114,7 @@ async function reproducePrimaryCordis(lock, profile) {
 }
 
 async function reproduceStageNightly(lock) {
+  const toolEnv = await formalToolEnvironment(lock.toolchain)
   const stage = researchStage(lock, 'conformance')
   const root = await requireStageCheckout(lock, stage.id, 'cordis')
   const output = resolve(artifactsRoot, 'cordis-nightly')
@@ -123,7 +126,7 @@ async function reproduceStageNightly(lock) {
     '--quiet',
     '--output', output,
     '--cache', cache,
-  ], { cwd }))
+  ], { cwd, env: toolEnv }))
   await validateEvidenceOutput(output, lock, {
     role: 'upstream',
     revision: stage.repositories.cordis.revision,
@@ -132,6 +135,7 @@ async function reproduceStageNightly(lock) {
 }
 
 async function reproducePrimaryVendored(lock) {
+  const toolEnv = await formalToolEnvironment(lock.toolchain)
   const output = resolve(artifactsRoot, 'deepseek-harness')
   const cordisRoot = resolve(studyRoot, lock.repositories.cordis.path)
   const harnessRoot = resolve(studyRoot, lock.repositories.deepseekHarness.path)
@@ -139,6 +143,7 @@ async function reproducePrimaryVendored(lock) {
   await run('corepack', ['pnpm', 'test:cordis-paper'], {
     cwd: harnessRoot,
     env: {
+      ...toolEnv,
       CI: 'true',
       CORDIS_FORMAL_ROOT: cordisRoot,
       CORDIS_FORMAL_OUTPUT: output,
@@ -166,6 +171,7 @@ function stageOutput(order, id, key) {
 }
 
 async function reproduceBaseline(lock) {
+  const toolEnv = await formalToolEnvironment(lock.toolchain)
   const stage = researchStage(lock, 'baseline')
   const stageRoot = resolve(artifactsRoot, 'stages/01-baseline')
   const cache = resolve(artifactsRoot, 'tool-cache')
@@ -180,11 +186,12 @@ async function reproduceBaseline(lock) {
     '--quiet',
     '--output', cordisOutput,
     '--cache', cache,
-  ], { cwd: root }))
+  ], { cwd: root, env: toolEnv }))
   const cordis = await validateBaselineOutput(cordisOutput, lock, { key: 'cordis', role: 'upstream' })
   await run('corepack', ['pnpm', 'test:cordis-paper'], {
     cwd: harnessRoot,
     env: {
+      ...toolEnv,
       CI: 'true',
       CORDIS_FORMAL_ROOT: cordisRoot,
       CORDIS_FORMAL_OUTPUT: harnessOutput,
@@ -199,6 +206,7 @@ async function reproduceBaseline(lock) {
 }
 
 async function reproduceConformance(lock) {
+  const toolEnv = await formalToolEnvironment(lock.toolchain)
   const stage = researchStage(lock, 'conformance')
   const stageRoot = resolve(artifactsRoot, 'stages/02-conformance')
   const cache = resolve(artifactsRoot, 'tool-cache')
@@ -214,7 +222,7 @@ async function reproduceConformance(lock) {
       '--quiet',
       '--output', cordisOutput,
       '--cache', cache,
-    ], { cwd: root })
+    ], { cwd: root, env: toolEnv })
     await runOrdinaryGates(root, 'cordis')
   })
   const cordis = await validateEvidenceOutput(cordisOutput, lock, {
@@ -225,6 +233,7 @@ async function reproduceConformance(lock) {
   await run('corepack', ['pnpm', 'test:cordis-paper'], {
     cwd: harnessRoot,
     env: {
+      ...toolEnv,
       CI: 'true',
       CORDIS_FORMAL_ROOT: cordisRoot,
       CORDIS_FORMAL_OUTPUT: harnessOutput,

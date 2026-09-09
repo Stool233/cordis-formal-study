@@ -4,7 +4,7 @@ English | [中文](upstream-alignment.zh-CN.md)
 
 The lifecycle fixes have been migrated to official Cordis `f8ea3cd` and Harness `5dda764`, and the current candidates pass the shared historical specification. The original three-stage snapshots remain unchanged.
 
-The recorded passes below precede another replacement of the TLC release asset. The [CI follow-up](#ci-follow-up-after-the-paper-review) now blocks fresh formal runs against both locks; the paper-review commit's Integrity check passes.
+The recorded passes below precede another replacement of the TLC release asset. The resulting [CI failure](#ci-follow-up-after-the-paper-review) is addressed by [bundling the exact locked artifacts](../tools/README.md), including the recovered original TLC. The incident history below retains its original results.
 
 ## Migration results
 
@@ -89,6 +89,8 @@ The official asset now records `updated_at: 2026-09-08T17:57:45Z`. A fresh local
 ```
 
 This is a third artifact, not either locked JAR. The earlier [successful migration run](https://github.com/Stool233/cordis-formal-study/actions/runs/34257716674) remains evidence for its recorded toolchain. Neither lock nor its passing aggregate was rewritten. Reproduction requires the matching artifact, or an explicitly recorded and separately validated toolchain migration; repeating a fresh download cannot resolve this mismatch.
+
+The exact historical artifact was subsequently recovered from [CI run 31922162491](https://github.com/Stool233/cordis-formal-study/actions/runs/31922162491). It, the retained migration artifact, and CommunityModules are now committed under their full hashes. [Tool acquisition](../tools/README.md) uses these files for both flows, including Harness subprocesses, without accessing the rolling release. Tests deny downloads and supply corrupted old caches; both pinned kits still parse all modules and run TLC. Historical locks and reports remain unchanged.
 
 ## Paper cross-reference
 

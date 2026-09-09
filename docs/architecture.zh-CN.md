@@ -96,9 +96,9 @@ Runner 从固定的 Git tree 提取历史 Cordis kit，只在该副本的 runner
 
 ## 完整性与 CI
 
-[Upstream alignment](../.github/workflows/upstream-alignment.yml) 在相关 push、PR 或手动触发时运行本次迁移：取得两个 fork 的精确候选提交，执行行为、模型、轨迹与 mutation 检查，仅上传 evidence 目录。历史 Conformance、Nightly 与 Release 保留原实验，仍受[历史 TLC 可用性问题](upstream-alignment.zh-CN.md#tlc-下载发生了变化)影响。
+[Upstream alignment](../.github/workflows/upstream-alignment.yml) 在相关 push、PR 或手动触发时运行本次迁移：取得两个 fork 的精确候选提交，执行行为、模型、轨迹与 mutation 检查，仅上传 evidence 目录。历史 Conformance、Nightly 与 Release 保留原实验。所有形式化入口都使用[入库资产](../tools/README.zh-CN.md)，先按所选 lock 校验，再将文件路径交给未修改 kit 自身的哈希校验器。
 
-`npm run verify` 检查 lock schema、阶段顺序与 revision 映射、gitlink、clean submodule/checkouts、论文哈希、个人提交身份、Cordis/DSH pin、观测点与场景清单、报告路径和双语链接。若任何阶段证据已经存在，verify 也会重新验证其语义。
+`npm run verify` 检查 lock schema、阶段顺序与 revision 映射、gitlink、clean submodule/checkouts、论文及入库工具哈希、个人提交身份、Cordis/DSH pin、观测点与场景清单、报告路径和双语链接。若任何阶段证据已经存在，verify 也会重新验证其语义。
 
 Integrity workflow 不执行 TLC。Conformance 根据手动选择执行单阶段，或在 PR/`main` push 默认执行完整研究。Nightly 先执行三阶段，再在 conformance Cordis checkout 上运行分层完整 BFS 与固定 seed 的扩大边界抽样。Release 在同一固定源码上重跑并打包。
 
