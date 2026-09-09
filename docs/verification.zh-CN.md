@@ -2,7 +2,7 @@
 
 [English](verification.md) | 中文
 
-主线证据围绕[两个通过 TLC 发现的缺陷](contributions.zh-CN.md)。每份实现的三个拆卸场景，都表现为修复前被拒绝、修复后被接受。[contributions.lock.json](../contributions.lock.json)将每份轨迹与源码版本及 SHA-256 绑定；[报告](contribution-report.json)记录实际执行的模型和结果。
+主线证据围绕[两个通过 TLC 发现的缺陷](contributions.zh-CN.md)。每份实现的三个拆卸场景，都表现为修复前被拒绝、修复后被接受。[contributions.lock.json](../contributions.lock.json)将每份轨迹与源码版本及 SHA-256 绑定；[报告](contribution-report.json)来自[重新执行源码的 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459029)，记录实际执行的模型和结果。[独立重放 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459101)再次得到一致的选定结果。
 
 ## TLC 检查什么
 
@@ -27,7 +27,7 @@
 
 ## 补充回归
 
-[无插桩检查](../checks/lifecycle.mjs)直接检查资源可用性、暂停清理期间 consumer 的可发现性和 provider 身份。两份实现的三个检查均通过；[行为报告](verification-report.json)记录源码树和检查器哈希。它们支持修复并防止相邻行为回归；测试通过或人工变异被拒绝，不算新的缺陷发现。
+[无插桩检查](../checks/lifecycle.mjs)直接检查资源可用性、暂停清理期间 consumer 的可发现性和 provider 身份。两份实现的三个检查均通过；[行为报告](verification-report.json)来自[当前行为 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390458869)，记录源码树和检查器哈希。它们支持修复并防止相邻行为回归；测试通过或人工变异被拒绝，不算新的缺陷发现。
 
 ## CI 与可复现性
 

@@ -1,9 +1,9 @@
 {
   "schema": "cordis.contribution-verification/v1",
-  "checkedAt": "2026-09-09T18:35:34.792Z",
+  "checkedAt": "2026-09-09T18:44:07.639Z",
   "status": "pass",
   "evidenceKind": "tlc-replay-of-observed-implementation-traces",
-  "sourceExecution": "recorded-captures",
+  "sourceExecution": "fixed-captures-matched-fresh-alignment",
   "paperTheorems": "not-proved-by-trace-replay",
   "lockSha256": "d51b6715c5a928ad02dda0d7cafede8461d018df29ffeb2c398ef42a09089da5",
   "checkerSha256": {
@@ -12,7 +12,7 @@
     "scripts/lib/toolchain.mjs": "147874f8ce31f3d48f10970cdffc3aa2e362e20e781cadde0161f5466f51b977"
   },
   "runtime": {
-    "node": "24.14.0",
+    "node": "24.20.0",
     "java": "openjdk version \"21.0.12.1\" 2026-08-18 LTS\nOpenJDK Runtime Environment Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS)\nOpenJDK 64-Bit Server VM Temurin-21.0.12.1+1 (build 21.0.12.1+1-LTS, mixed mode, sharing)"
   },
   "toolchain": {

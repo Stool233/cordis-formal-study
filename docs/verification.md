@@ -2,7 +2,7 @@
 
 English | [中文](verification.zh-CN.md)
 
-The main evidence concerns the [two TLC-discovered defects](contributions.md). For each implementation, three captured teardown scenarios are rejected before the fix and accepted after the fix. [contributions.lock.json](../contributions.lock.json) binds every trace to its source revision and SHA-256; the [report](contribution-report.json) records the executed models and results.
+The main evidence concerns the [two TLC-discovered defects](contributions.md). For each implementation, three captured teardown scenarios are rejected before the fix and accepted after the fix. [contributions.lock.json](../contributions.lock.json) binds every trace to its source revision and SHA-256; the [report](contribution-report.json), published from [fresh-source CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459029), records the executed models and results. [Standalone replay CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459101) independently reproduces the same selected outcomes.
 
 ## What TLC checks
 
@@ -27,7 +27,7 @@ The committed before captures come from the retained diagnostics on official Cor
 
 ## Supporting regressions
 
-The [uninstrumented checks](../checks/lifecycle.mjs) exercise actual resource availability, consumer discoverability during paused cleanup, and provider identity. Both implementations pass all three; the [behavior report](verification-report.json) records source trees and checker hashes. These checks support the fixes and guard adjacent behavior. A passing test or an artificial mutant is not a new defect discovery.
+The [uninstrumented checks](../checks/lifecycle.mjs) exercise actual resource availability, consumer discoverability during paused cleanup, and provider identity. Both implementations pass all three; the [behavior report](verification-report.json) from [current behavior CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390458869) records source trees and checker hashes. These checks support the fixes and guard adjacent behavior. A passing test or an artificial mutant is not a new defect discovery.
 
 ## CI and reproducibility
 
