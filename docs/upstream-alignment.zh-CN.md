@@ -4,7 +4,7 @@
 
 生命周期修复已迁移到官方 Cordis `f8ea3cd` 与 Harness `5dda764`，新版候选通过了共用的历史规格检查。原始三阶段快照保持不变。
 
-下文记录的通过发生在 TLC 资产再次被替换之前。由此导致的 [CI 失败](#论文审阅后的-ci-核对)已通过[固定保存精确锁定资产](../tools/README.zh-CN.md)处理，其中包含找回的原始 TLC。下文保留当时的运行结果。
+两条形式化 workflow 已使用[固定保存的锁定资产](../tools/README.zh-CN.md)再次通过，其中包含找回的原始 TLC，见[资产恢复后的 CI 验证](#资产恢复后的-ci-验证)。下文保留初次比较与资产更换时的观测。
 
 ## 迁移验证结果
 
@@ -45,7 +45,9 @@ Harness 的 JSONL 测试首次运行缺少当前版本要求的原生 POSIX 锁�
 
 开始本次核对时，学习门户基线为 `c00023c`。两个 fork 的历史 baseline、conformance、upstream-fix 分支均仍指向 lock 中的 revision。官方最新源码保存在 `.artifacts/upstream/<repository>/<revision>/` 的独立 detached worktree；实验插桩保存在名称包含 `observed` 的独立目录中。
 
-## 未修改上游与历史对照
+## 初次上游比较与历史对照
+
+以下观测发生在下文所述的工具资产恢复之前。
 
 | 检查 | 本次结果 | 含义 |
 | --- | --- | --- |
@@ -76,13 +78,13 @@ Harness 的 JSONL 测试首次运行缺少当前版本要求的原生 POSIX 锁�
 
 原 runner 正确拒绝了新文件。未修改上游的对照检查使用 `.artifacts/upstream/toolchain-diagnostic/` 中的规格副本，只更新 runner 和 provenance 的工具哈希；TLA+ 模型、场景与期望断言保持不变，输出也与历史三阶段目录隔离。因此这些结果是**新版工具链上的诊断证据**，不能冒充原 lock 的成功复现。
 
-本机使用独立安装并校验 SHA-256 的 Temurin 21，位于 `.artifacts/toolchains/`。运行 TLC 前，将其 `Contents/Home/bin` 加入 `PATH`；这也适用于后续提供原始哈希 JAR 后的历史复现。
+本机使用独立安装并校验 SHA-256 的 Temurin 21，位于 `.artifacts/toolchains/`。运行 TLC 前，将其 `Contents/Home/bin` 加入 `PATH`；历史复现现已从入库资产取得原始 JAR。
 
 ### 论文审阅后的 CI 核对
 
 提交 `dc6d4db` 的 [Integrity](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588196)通过。[Upstream alignment](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588233)通过原始行为断言与 29 点观测审计，随后在 TLC 下载哈希校验处停止，尚未执行模型。[历史 Conformance](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588132)也在同一下载检查处受阻，其预期哈希不同。
 
-官方资产现记录 `updated_at: 2026-09-08T17:57:45Z`。本地重新下载的哈希与 GitHub digest、本次 CI 观测一致：
+该次检查时，官方资产记录 `updated_at: 2026-09-08T17:57:45Z`。当时本地重新下载的哈希与 GitHub digest、CI 观测一致：
 
 ```text
 4c7bb1f6b050d56c197ee9ddd6e57fe521eae175f5043c9fb98b169f7b2d5407
@@ -91,6 +93,20 @@ Harness 的 JSONL 测试首次运行缺少当前版本要求的原生 POSIX 锁�
 这是第三份资产，不匹配任何一份锁定 JAR。此前[迁移成功的运行](https://github.com/Stool233/cordis-formal-study/actions/runs/34257716674)仍是其记录工具链的证据。两份锁与通过的聚合报告均未改写。复现需要取得对应资产，或显式记录并单独验证一次工具链迁移；重复全新下载不能消除这个 mismatch。
 
 随后从 [CI 运行 31922162491](https://github.com/Stool233/cordis-formal-study/actions/runs/31922162491)找回了精确的历史资产。它与保留的迁移资产、CommunityModules 现已按完整哈希提交入库。[工具获取流程](../tools/README.zh-CN.md)为两条路径及 Harness 子进程提供这些文件，不再访问滚动 release。测试在禁止下载、旧缓存损坏的情况下，两套固定 kit 仍能解析全部模块并运行 TLC。历史版本锁与报告均保持不变。
+
+### 资产恢复后的 CI 验证
+
+提交 [`5f73d6f`](https://github.com/Stool233/cordis-formal-study/commit/5f73d6f5abd032cd3d97209791f132dd9bade366)于 2026-09-09 通过全部三条 workflow：
+
+| Workflow | 结果 |
+| --- | --- |
+| [Integrity](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660661) | 23 项单元测试与完整仓库校验通过，覆盖全部入库资产的哈希。 |
+| [Conformance](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660992) | 两套工具离线检查、完整历史三阶段研究通过，使用原始 TLC pin。 |
+| [Upstream alignment](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660644) | 两套工具离线检查、5 组模型、29 个观测点、13/17 条正向轨迹及两端各 4 个变异拒绝检查通过。 |
+
+下载的历史聚合报告与[上次成功运行](https://github.com/Stool233/cordis-formal-study/actions/runs/32001559086)逐字节相同。baseline 行为与轨迹、conformance、mutation、模型和普通门禁报告的 JSON 也均一致。baseline 保留预期的 9/10 条轨迹不匹配与 4/3 项行为失败；修复阶段接受 13/17 条轨迹，并在每端拒绝全部 4 个变异。
+
+新迁移聚合报告与[已记录的报告](alignment-report.json)仅运行时间不同。[机器可读快照](upstream-alignment.json)在 `toolArtifactRecovery` 下记录本次恢复，并在 `ciFollowup` 中保留此前的哈希失败。两套现有工具链均已恢复复现，论文审阅对结论与前提的限定仍然适用。
 
 ## 论文对应关系
 

@@ -4,7 +4,7 @@ English | [中文](upstream-alignment.zh-CN.md)
 
 The lifecycle fixes have been migrated to official Cordis `f8ea3cd` and Harness `5dda764`, and the current candidates pass the shared historical specification. The original three-stage snapshots remain unchanged.
 
-The recorded passes below precede another replacement of the TLC release asset. The resulting [CI failure](#ci-follow-up-after-the-paper-review) is addressed by [bundling the exact locked artifacts](../tools/README.md), including the recovered original TLC. The incident history below retains its original results.
+Both formal workflows now pass using the [bundled locked artifacts](../tools/README.md), including the recovered original TLC. See [CI validation after artifact recovery](#ci-validation-after-artifact-recovery). The initial comparison and release-asset incidents remain recorded below.
 
 ## Migration results
 
@@ -45,7 +45,9 @@ Harness's JSONL tests initially lacked the current native POSIX-lock addon. Afte
 
 The portal started this comparison at `c00023c`. All six historical research branch tips still match the lock. Pristine upstream sources are detached worktrees under `.artifacts/upstream/<repository>/<revision>/`; separate worktrees with `observed` in their names contain experimental instrumentation.
 
-## Unmodified upstream and historical controls
+## Initial upstream comparison and historical controls
+
+These observations precede the tool-artifact recovery described below.
 
 | Check | Observed result |
 | --- | --- |
@@ -76,13 +78,13 @@ CommunityModules still matches its pinned hash. Other local TLC copies did not m
 
 Diagnostics used specification copies under `.artifacts/upstream/toolchain-diagnostic/`, updating only the TLC hash in the runner and provenance. Models, scenarios, and expected assertions were retained. Outputs are separate from historical stage evidence: **these are diagnostics with a different toolchain, not successful reproduction of the original lock**.
 
-This machine uses a separately downloaded, SHA-256-verified Temurin 21 under `.artifacts/toolchains/`; add its `Contents/Home/bin` to `PATH` before TLC runs. Historical reproduction additionally requires a JAR matching the original hash.
+This machine uses a separately downloaded, SHA-256-verified Temurin 21 under `.artifacts/toolchains/`; add its `Contents/Home/bin` to `PATH` before TLC runs. Historical reproduction now obtains the original JAR from the bundled artifacts.
 
 ### CI follow-up after the paper review
 
 Commit `dc6d4db` passed [Integrity](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588196). [Upstream alignment](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588233) passed all original behavior assertions and the 29-point observation audit, then stopped before model execution at the TLC download checksum. [Historical Conformance](https://github.com/Stool233/cordis-formal-study/actions/runs/34263588132) stopped at the same download check against its different pin.
 
-The official asset now records `updated_at: 2026-09-08T17:57:45Z`. A fresh local download matches both its GitHub digest and the new CI observation:
+At that check, the official asset recorded `updated_at: 2026-09-08T17:57:45Z`. A fresh local download matched both its GitHub digest and the CI observation:
 
 ```text
 4c7bb1f6b050d56c197ee9ddd6e57fe521eae175f5043c9fb98b169f7b2d5407
@@ -91,6 +93,20 @@ The official asset now records `updated_at: 2026-09-08T17:57:45Z`. A fresh local
 This is a third artifact, not either locked JAR. The earlier [successful migration run](https://github.com/Stool233/cordis-formal-study/actions/runs/34257716674) remains evidence for its recorded toolchain. Neither lock nor its passing aggregate was rewritten. Reproduction requires the matching artifact, or an explicitly recorded and separately validated toolchain migration; repeating a fresh download cannot resolve this mismatch.
 
 The exact historical artifact was subsequently recovered from [CI run 31922162491](https://github.com/Stool233/cordis-formal-study/actions/runs/31922162491). It, the retained migration artifact, and CommunityModules are now committed under their full hashes. [Tool acquisition](../tools/README.md) uses these files for both flows, including Harness subprocesses, without accessing the rolling release. Tests deny downloads and supply corrupted old caches; both pinned kits still parse all modules and run TLC. Historical locks and reports remain unchanged.
+
+### CI validation after artifact recovery
+
+Commit [`5f73d6f`](https://github.com/Stool233/cordis-formal-study/commit/5f73d6f5abd032cd3d97209791f132dd9bade366) passed all three workflows on 2026-09-09:
+
+| Workflow | Result |
+| --- | --- |
+| [Integrity](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660661) | 23 unit tests and full repository verification pass, including every bundled artifact's hash. |
+| [Conformance](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660992) | Both offline tool checks and the complete historical three-stage study pass with the original TLC pin. |
+| [Upstream alignment](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660644) | Both offline tool checks, 5 model configurations, 29 observation points, 13/17 accepted traces, and 4 rejected mutations per implementation pass. |
+
+The downloaded historical aggregate is byte-identical to the [previous successful run](https://github.com/Stool233/cordis-formal-study/actions/runs/32001559086). Its baseline behavior/trace reports, conformance reports, mutation reports, model report, and ordinary-gate report also have identical JSON. The baseline retains the expected 9/10 trace mismatches and 4/3 behavior failures; the fixed stage accepts 13/17 traces and rejects all 4 mutations in each implementation.
+
+The new migration aggregate matches [the recorded aggregate](alignment-report.json) in every field except its run timestamp. [The snapshot](upstream-alignment.json) records this recovery under `toolArtifactRecovery` and preserves the earlier checksum failures under `ciFollowup`. This restores reproduction with both existing toolchains; the paper review's qualifications remain unchanged.
 
 ## Paper cross-reference
 
