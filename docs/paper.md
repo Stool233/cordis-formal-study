@@ -2,7 +2,7 @@
 
 English | [中文](paper.zh-CN.md)
 
-The reading source is *A Programming Paradigm for Spatiotemporal Composability*, [arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1), 92 pages. The version entry still listed v1 when checked on 2026-09-10; the [lock](../current.lock.json) records the exact version and PDF hash.
+The reading source is *A Programming Paradigm for Spatiotemporal Composability*, [arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1), 92 pages. The version check on 2026-09-10 returned v1; the [lock](../current.lock.json) records the exact version and PDF hash.
 
 ## Dependencies and cleanup
 
@@ -16,14 +16,14 @@ Retirement means that a component has been asked to leave. Asynchronous cleanup 
 | --- | --- | --- |
 | A provider's recovery is guarded by its committed dependents | The provider resource remains available until the consumer finishes asynchronous cleanup | Guarded L-Unload and Theorem 70 in §4 |
 | Removal requires an Inactive component with no retained bindings or children | A consumer stays in the runtime registry during cleanup and is removed afterward | O-Remove in §4 |
-| Target and committed views record provider identities | Replacing a provider produces a new consumer binding even when the service value is unchanged | Definition 53 and the lifecycle rules |
+| Target and committed views record provider identities | Replacing a provider produces a new consumer binding even when the service value is the same | Definition 53 and the lifecycle rules |
 
-These correspondences are grounded in the [paper](https://arxiv.org/pdf/2608.25512v1). Registry discoverability is an implementation condition needed to enforce dependency cleanup order; the paper does not prescribe a JavaScript registry data structure.
+See the rules in the [paper](https://arxiv.org/pdf/2608.25512v1). Cordis uses the registry to find consumers whose cleanup the provider must await.
 
 ## Applying the conclusions
 
-Locate the checked source through [Implementation](implementation.md), then read the inputs, observation points, and assertions in [Verification](verification.md). Cleanup order applies along established dependency bindings; it does not directly generalize to arbitrary parent-child relationships or undeclared external effects.
+Locate the checked source through [Implementation](implementation.md), then read the inputs, observation points, and assertions in [Verification](verification.md). The ordering requirement follows established dependency bindings. Applying it to parent and child components or external effects requires establishing those bindings and the theorem premises.
 
-This project confirms the correspondence between these rules and concrete regression scenarios. Passing behavior tests cover the pinned implementations and given scenarios; a formal proof of the full calculus is outside this check set.
+The tests check these behaviors in the implementations and scenarios recorded by the version lock.
 
-The [confirmed contribution set](contributions.md) concerns the two cleanup defects. Provider identity is reading context and a supporting regression, not an additional defect discovery.
+The [contribution guide](contributions.md) documents the two cleanup defects. Provider identity helps explain service bindings and has a supporting regression test.

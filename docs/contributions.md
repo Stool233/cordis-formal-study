@@ -2,34 +2,34 @@
 
 English | [中文](contributions.zh-CN.md)
 
-The contribution is finding and repairing concrete lifecycle defects through observed traces and TLC. The [selected evidence](../contributions.lock.json) covers two related defects in both [pinned implementations](implementation.md). The current paper supplies the interpretation of cleanup ordering; a violation by an implementation does not refute a theorem under its premises.
+We found and repaired two related lifecycle defects by recording implementation traces and checking them with TLC. The [evidence](../contributions.lock.json) identifies the traces and [implementation versions](implementation.md). The paper's cleanup rules explain the required ordering under declared dependency bindings.
 
 ## Provider recovery starts too early
 
-A consumer binds a provider service and installs cleanup that can finish asynchronously. Disposing the provider must leave its resources available until the consumer finishes that cleanup. In the unmodified implementations, provider recovery starts while the consumer remains `Unloading` with its committed provider binding.
+A consumer binds a provider service and installs cleanup that can finish asynchronously. Disposing the provider must leave its resources available until the consumer finishes that cleanup. In the unmodified implementations, provider recovery starts while the consumer is `Unloading` with its committed provider binding.
 
-In the retained Cordis `async-consumer-teardown-guard` trace, provider recovery starts at event **5**; consumer cleanup finishes at event **14**. In the Harness trace, the corresponding events are **3** and **10**. The related `provider-consumer-reverse-exit` scenario exposes the same ordering defect through reverse effect recovery.
+In the Cordis `async-consumer-teardown-guard` trace, provider recovery starts at event **5**; consumer cleanup finishes at event **14**. In the Harness trace, the corresponding events are **3** and **10**. The `provider-consumer-reverse-exit` scenario exposes the same defect through the order of effect recovery.
 
 The fix records notified dependents and awaits them before recovering the provider's disposables. See the Cordis [disposal code](https://github.com/Stool233/cordis/blob/18c327f4566e8f640737c43a480e6d74a0673579/packages/core/src/fiber.ts) and the Harness [vendored implementation](https://github.com/Stool233/deepseek-harness/blob/fdcd1ce36a296ab2288bf407fccba4c8fa634963/vendor/cordis/src/fiber.ts).
 
-## Retirement hides a consumer that still needs cleanup
+## Retirement hides a consumer during cleanup
 
-Whole-root disposal can retire a consumer and its provider concurrently. Removing that consumer from the runtime list as soon as disposal starts hides ongoing cleanup from dependency discovery. The provider can then proceed even when a wait exists for the consumers it can still find.
+Disposing the root can retire a consumer and its provider concurrently. Removing the consumer from the runtime list as soon as disposal starts hides its ongoing cleanup from dependency discovery. The provider's wait then misses that consumer and recovery proceeds too early.
 
-In Cordis `concurrent-root-teardown-guard`, the consumer retires at event **4**. Provider recovery starts at **12** while that consumer is still unloading; the service is withdrawn at **20**, before consumer cleanup finishes at **23**. Harness shows the same failure at events **4**, **10**, **16**, and **18**. These are directly inspectable [before traces](../evidence/contributions/), not merely aggregate failure counts.
+In Cordis `concurrent-root-teardown-guard`, the consumer retires at event **4**. Provider recovery starts at **12** while that consumer is still unloading; the service is withdrawn at **20**, before consumer cleanup finishes at **23**. Harness shows the same failure at events **4**, **10**, **16**, and **18**. Inspect these events in the [traces before the fix](../evidence/contributions/).
 
-The fix retains the consumer's runtime membership until its cleanup settles. It complements the unload wait: the wait must discover the retiring consumer. A separate registry barrier regression checks this implementation mechanism; the projected trace alone does not expose every JavaScript registry mutation.
+The fix keeps the consumer in the runtime list until cleanup finishes, so the provider's wait can find it. A regression test pauses cleanup at a barrier and checks registry membership directly. The trace records the lifecycle and recovery events; the registry assertion checks the implementation mechanism behind their order.
 
-## Evidence chain and limits
+## Evidence for the fixes
 
-| Evidence | Role |
+| Evidence | What it establishes |
 | --- | --- |
-| Unmodified official-source captures | Establish that the ordering problem exists before the fix |
-| TLC counterexamples | Reject the offending observed recovery step |
-| Fixed-source captures | Exercise the same scenarios on the current selected forks |
-| Early-recovery negative controls | Show that the focused checker still rejects the dangerous ordering |
-| Uninstrumented runtime regressions | Check resource availability and registry membership without observer callbacks |
+| Captures from unmodified official source | The ordering problem occurs before the fix |
+| TLC counterexamples | The observed recovery step violates the checked rule |
+| Captures from fixed source | The same scenarios complete with the required ordering |
+| Controls that start recovery early | The checker rejects the dangerous ordering |
+| Runtime regressions | Resources stay available during cleanup and the consumer stays in the registry |
 
-The [verification guide](verification.md) owns the runnable evidence and results. Each contribution appears in both implementations; scenarios and synthetic controls are not separate discovered bugs. Provider identity remains a useful supporting regression, but this contribution set does not claim a separately discovered identity defect.
+The [verification guide](verification.md) records results for these two defects across both implementations. The scenarios reproduce the defects, and synthetic controls check the model's ability to reject early recovery. Provider identity has a supporting regression test.
 
-The paper's guarded **L-Unload**, **Theorem 70**, and retirement/removal rules support this reading. The theorem concerns declared bindings and its stated premises; our finite implementation traces do not establish arbitrary effects, general progress, confluence, or a refinement of the whole current calculus. See [paper reading](paper.md).
+The paper's guarded **L-Unload**, **Theorem 70**, and retirement/removal rules describe the relevant ordering under their stated premises. Our results cover the recorded executions and their declared bindings. See [paper reading](paper.md) for the correspondence between those rules and the checked behaviors.

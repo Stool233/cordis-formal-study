@@ -2,34 +2,34 @@
 
 [English](contributions.md) | 中文
 
-这里的贡献是：通过实际观测轨迹和 TLC 发现具体生命周期缺陷，并完成修复。[选定证据](../contributions.lock.json)覆盖[两份锁定实现](implementation.zh-CN.md)中的两个相关问题。当前论文用于解释依赖清理顺序；实现违反这个顺序，并不等于推翻在相应前提下成立的论文定理。
+我们记录实现轨迹，用 TLC 检查，发现并修复了两个相关的生命周期缺陷。[证据清单](../contributions.lock.json)记录轨迹及其[实现版本](implementation.zh-CN.md)。论文的清理规则说明了声明依赖绑定下应满足的顺序。
 
 ## Provider 过早开始恢复资源
 
-Consumer 绑定 provider 服务后，会安装可能异步完成的清理逻辑。销毁 provider 时，应让它的资源一直可用，直到 consumer 清理完成。未修改的实现却在 consumer 仍处于 `Unloading`、保留 committed provider 绑定时，就开始恢复 provider 资源。
+Consumer 绑定 provider 服务后，会安装可能异步完成的清理逻辑。销毁 provider 时，它的资源必须一直可用，直到 consumer 清理完成。未修改的实现在 consumer 处于 `Unloading`、保留 committed provider 绑定时，就开始恢复 provider 资源。
 
-保留的 Cordis `async-consumer-teardown-guard` 轨迹中，provider 在事件 **5** 开始恢复；consumer 到事件 **14** 才完成清理。Harness 对应事件为 **3** 和 **10**。相关的 `provider-consumer-reverse-exit` 场景从副作用的逆向恢复顺序暴露同一问题。
+Cordis `async-consumer-teardown-guard` 轨迹中，provider 在事件 **5** 开始恢复；consumer 到事件 **14** 才完成清理。Harness 对应事件为 **3** 和 **10**。`provider-consumer-reverse-exit` 场景通过副作用恢复的顺序暴露同一缺陷。
 
 修复记录被通知的 dependent，在恢复 provider 的 disposables 前等待它们结束。源码见 Cordis 的[销毁逻辑](https://github.com/Stool233/cordis/blob/18c327f4566e8f640737c43a480e6d74a0673579/packages/core/src/fiber.ts)和 Harness 的[内置实现](https://github.com/Stool233/deepseek-harness/blob/fdcd1ce36a296ab2288bf407fccba4c8fa634963/vendor/cordis/src/fiber.ts)。
 
-## Retirement 隐藏了尚未完成清理的 consumer
+## Retirement 隐藏了正在清理的 consumer
 
-销毁整个根节点时，consumer 和 provider 可能同时进入退出流程。如果 consumer 刚开始退出就从运行时列表移除，依赖发现过程就看不到它仍在进行的清理。即使 provider 会等待它能找到的 consumer，这个 consumer 也可能被漏掉。
+销毁根节点时，consumer 和 provider 可能同时进入退出流程。Consumer 刚开始退出就移出运行时列表，会让依赖发现过程看不到它正在进行的清理。Provider 的等待因此漏掉这个 consumer，过早开始恢复。
 
-Cordis `concurrent-root-teardown-guard` 中，consumer 在事件 **4** 进入 retirement。它仍在卸载时，provider 在 **12** 开始恢复，在 **20** 撤销服务，而 consumer 到 **23** 才完成清理。Harness 对应事件为 **4**、**10**、**16**、**18**。这些事实可以直接检查[修复前轨迹](../evidence/contributions/)，不依赖汇总失败数量。
+Cordis `concurrent-root-teardown-guard` 中，consumer 在事件 **4** 进入 retirement。它仍在卸载时，provider 在 **12** 开始恢复，在 **20** 撤销服务，而 consumer 到 **23** 才完成清理。Harness 对应事件为 **4**、**10**、**16**、**18**。可以在[修复前轨迹](../evidence/contributions/)中查看这些事件。
 
-修复让 consumer 在清理结束前一直保留运行时成员身份。这与卸载等待配合：等待过程必须能发现正在退出的 consumer。另一个使用 registry 屏障的行为回归检查这一实现机制；投影轨迹本身并未暴露 JavaScript registry 的每一次修改。
+修复让 consumer 在清理结束前一直保留在运行时列表中，使 provider 的等待能够找到它。回归测试用屏障暂停清理，直接检查 registry 成员身份。轨迹记录生命周期和恢复事件，registry 断言检查影响这些事件顺序的实现机制。
 
-## 证据链与边界
+## 修复的验证证据
 
-| 证据 | 作用 |
+| 证据 | 确认的事实 |
 | --- | --- |
-| 未修改上游源码的观测轨迹 | 确认修复前确实存在顺序问题 |
-| TLC 反例 | 拒绝有问题的观测恢复步骤 |
-| 修复后的源码轨迹 | 在当前选定 fork 上执行相同场景 |
-| 提前恢复的负向对照 | 确认聚焦后的检查器仍能拒绝危险顺序 |
-| 无插桩运行时回归 | 直接检查资源可用性和 registry 成员身份 |
+| 未修改上游源码的观测轨迹 | 修复前存在顺序问题 |
+| TLC 反例 | 观测到的恢复步骤违反被检查的规则 |
+| 修复源码的观测轨迹 | 相同场景按要求的顺序完成 |
+| 提前开始恢复的负向对照 | 检查器能拒绝危险顺序 |
+| 运行时回归 | 清理期间资源保持可用，consumer 保留在 registry 中 |
 
-[验证说明](verification.zh-CN.md)维护可执行证据与结果。每个贡献在两份实现中出现；多个场景和人工负向对照不各算一个新发现。Provider 身份仍是有用的补充回归，但这组贡献不单独主张发现了身份缺陷。
+[验证说明](verification.zh-CN.md)记录两个缺陷在两份实现中的结果。场景用于复现缺陷，人工负向对照用于检查模型能否拒绝提前恢复。Provider 身份有一项补充回归测试。
 
-论文的 guarded **L-Unload**、**Theorem 70** 和 retirement/removal 规则支持上述解释。定理针对声明的绑定及其前提；这里有限的实现轨迹并未证明任意副作用、一般进展、合流性或完整当前演算的 refinement。见[论文阅读](paper.zh-CN.md)。
+论文的 guarded **L-Unload**、**Theorem 70** 和 retirement/removal 规则描述了相应前提下的顺序要求。我们的结果覆盖记录的执行及其声明的绑定。[论文阅读](paper.zh-CN.md)说明这些规则与被检查行为的对应关系。

@@ -2,7 +2,9 @@
 
 [English](verification.md) | 中文
 
-主线证据围绕[两个通过 TLC 发现的缺陷](contributions.zh-CN.md)。每份实现的三个拆卸场景，都表现为修复前被拒绝、修复后被接受。[contributions.lock.json](../contributions.lock.json)将每份轨迹与源码版本及 SHA-256 绑定；[报告](contribution-report.json)来自[重新执行源码的 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459029)，记录实际执行的模型和结果。[独立重放 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459101)再次得到一致的选定结果。
+TLC 针对[两个缺陷](contributions.zh-CN.md)，检查每份实现的三个拆卸场景。修复前的轨迹被拒绝，修复后的轨迹被接受。[contributions.lock.json](../contributions.lock.json)记录每份轨迹的源码版本和 SHA-256。
+
+[报告](contribution-report.json)来自[从源码重新生成轨迹的 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459029)，列出执行的模型和结果。[重放已采集轨迹的 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390459101)得到相同结果。
 
 ## TLC 检查什么
 
@@ -13,24 +15,24 @@
 | `concurrent-root-teardown-guard` | 拒绝 | 接受 |
 | 人工提前恢复 provider 的负向对照 | — | 按预期拒绝 |
 
-每个观测场景分别运行两个模型。[CordisTrace](../formal/CordisTrace.tla)原样保留最初的观测轨迹检查器。[TeardownOrder](../formal/TeardownOrder.tla)独立检查卸载守卫：开始恢复时，仍 committed 到该 provider 的 consumer 必须已 inactive。这个聚焦模型不施加旧检查器更强的 `Active ⇒ target = committed` 条件。
+每个观测场景运行两个模型。[CordisTrace](../formal/CordisTrace.tla)检查观测事件的转换，并施加比当前论文更强的 `Active ⇒ target = committed` 条件。[TeardownOrder](../formal/TeardownOrder.tla)检查卸载守卫：provider 开始恢复时，仍 committed 到它的 consumer 必须已 inactive。
 
-六份上游轨迹都违反这个明确的守卫；六份修复轨迹都满足它，并完成重放。两个提前恢复的人工轨迹必须违反同一个不变量。解析错误、工具字节不符、超时或其他不变量失败，都不能算作成功复现缺陷。运行产物包含反例和日志。
+六份上游轨迹都违反这个守卫，六份修复轨迹都满足它并完成重放。两个提前恢复的人工轨迹必须违反同一个不变量。运行器要求出现这一明确的违规，才确认顺序缺陷。解析错误、工具字节不符、超时或其他不变量违规都会让运行失败。CI 上传反例和日志。
 
-原检查器的投影约束强于当前论文。它的 `TraceMatched` 表示观测事件被相应谓词完整消费，并不表示实现细化了整篇论文的 kernel。独立的守卫检查明确指出这组贡献真正对应的失败原因。
+`TraceMatched` 表示观测事件满足原检查器的谓词，直到轨迹结束。守卫检查指出导致顺序违规的恢复事件。这些结果针对记录的执行及两个模型的定义。
 
-## 轨迹重放与重新执行源码
+## 重放与生成轨迹
 
-提交到仓库的修复前轨迹来自对官方 Cordis `f8ea3cd` 与 Harness `5dda764` 保留的诊断。修复轨迹来自对 `18c327f` 和 `fdcd1ce` 的[成功对齐 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660644)。每份轨迹都记录来源。重放会重新运行 TLC，但不会执行源码来重新产生这些观测。
+已提交的修复前轨迹来自对官方 Cordis `f8ea3cd` 和 Harness `5dda764` 的诊断。修复后轨迹来自对 `18c327f` 和 `fdcd1ce` 的[对齐 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34315660644)。每份轨迹记录其来源。重放对这些已提交文件运行 TLC。
 
-`reproduce:alignment` 会在隔离的插桩 checkout 中重新生成修复实现的轨迹，校验观测补丁，并要求选定轨迹与已提交证据一致，然后复验贡献。它保留完整工具包的模型、轨迹和变异检查作为诊断；这些数量不额外计入贡献。冻结的工具包用于实现观测，并不是当前论文完整演算的形式化。
+`reproduce:alignment` 在隔离 checkout 中为修复源码加入轨迹插桩并执行。它校验观测补丁，生成轨迹，要求选定轨迹与已提交证据一致，然后运行贡献检查。命令还会执行观测工具包中范围更广的模型、轨迹和变异诊断。
 
 ## 补充回归
 
-[无插桩检查](../checks/lifecycle.mjs)直接检查资源可用性、暂停清理期间 consumer 的可发现性和 provider 身份。两份实现的三个检查均通过；[行为报告](verification-report.json)来自[当前行为 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390458869)，记录源码树和检查器哈希。它们支持修复并防止相邻行为回归；测试通过或人工变异被拒绝，不算新的缺陷发现。
+[无插桩检查](../checks/lifecycle.mjs)检查资源可用性、暂停清理期间 consumer 的可发现性和 provider 身份。两份实现的三个检查均通过。[行为报告](verification-report.json)来自[行为 CI](https://github.com/Stool233/cordis-formal-study/actions/runs/34390458869)，记录源码树和检查器哈希。这些回归检查修复及相关服务行为。
 
 ## CI 与可复现性
 
-[TLC contributions](../.github/workflows/contributions.yml)在推送和 PR 时重放选定轨迹与负向对照。[Current verification](../.github/workflows/current.yml)重新执行无插桩检查。[Upstream alignment](../.github/workflows/upstream-alignment.yml)在形式化输入或运行器变化时重新生成修复轨迹，也支持手动触发。
+[TLC contributions](../.github/workflows/contributions.yml)在推送和 PR 时重放已采集轨迹及负向对照。[Current verification](../.github/workflows/current.yml)执行无插桩检查。[Upstream alignment](../.github/workflows/upstream-alignment.yml)在形式化输入或运行器变化时，从修复源码生成轨迹，也支持手动触发。
 
-TLC 和 Community Modules [按内容哈希随仓库保存](../tools/README.zh-CN.md)，附带许可证并严格校验字节。这些入口不会查询会滚动替换的官方发布资产。[复现说明](reproduce.zh-CN.md)给出命令和版本更新流程。
+TLC 和 Community Modules [按内容哈希保存在仓库中](../tools/README.zh-CN.md)，附带许可证。每个形式化入口都校验并使用这些本地字节。[复现说明](reproduce.zh-CN.md)给出命令和版本更新步骤。

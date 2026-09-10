@@ -2,7 +2,7 @@
 
 [English](paper.md) | 中文
 
-阅读对象是 *A Programming Paradigm for Spatiotemporal Composability*，[arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1)，92 页。2026-09-10 核对版本入口时仍为 v1；精确版本与 PDF 哈希记录在[版本锁](../current.lock.json)中。
+阅读对象是 *A Programming Paradigm for Spatiotemporal Composability*，[arXiv:2608.25512v1](https://arxiv.org/abs/2608.25512v1)，92 页。2026-09-10 的版本检查结果为 v1；精确版本与 PDF 哈希记录在[版本锁](../current.lock.json)中。
 
 ## 先理解依赖与清理
 
@@ -18,12 +18,12 @@ Retirement 表示组件已被要求退出。组件仍可能有异步清理工作
 | 移除要求组件已 Inactive，并且没有保留的绑定和子节点 | 正在清理的 consumer 保留在运行时 registry 中，清理后移除 | §4 的 O-Remove 规则 |
 | Target 与 committed view 记录 provider 身份 | 替换 provider 时，即使服务值相同，也观察到新的 provider 绑定 | Definition 53 与生命周期规则 |
 
-这些对应关系来自[论文原文](https://arxiv.org/pdf/2608.25512v1)。Registry 的可发现性是实现执行依赖清理顺序所需的条件；论文并不规定 JavaScript registry 的具体数据结构。
+规则见[论文原文](https://arxiv.org/pdf/2608.25512v1)。Cordis 通过 registry 找到 consumer，让 provider 等待它们完成清理。
 
 ## 怎样使用这些结论
 
-先按[实现说明](implementation.zh-CN.md)定位被检查的源码，再看[验证说明](verification.zh-CN.md)中的输入、时点与断言。清理顺序沿已建立的依赖绑定成立，不能直接推广到任意父子组件或没有声明的外部副作用。
+先按[实现说明](implementation.zh-CN.md)定位被检查的源码，再看[验证说明](verification.zh-CN.md)中的输入、时点与断言。顺序要求沿已建立的依赖绑定成立。将它应用到父子组件或外部副作用时，需要先确认相应绑定和定理前提。
 
-本项目确认上述规则与具体回归场景的对应关系。行为测试的成功范围是锁定实现和给定场景，完整演算的形式化证明不在这组检查中。
+测试检查版本锁所记录的实现及场景是否满足这些行为要求。
 
-[已确认的贡献](contributions.zh-CN.md)聚焦两个清理缺陷。Provider 身份用于阅读背景和补充回归，不额外算作缺陷发现。
+[贡献说明](contributions.zh-CN.md)记录两个清理缺陷。Provider 身份帮助解释服务绑定，并有一项补充回归测试。
